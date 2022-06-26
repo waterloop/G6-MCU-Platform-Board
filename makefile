@@ -15,7 +15,7 @@
 ######################################
 TARGET = main
 
-TARGET = STM32G473CBTx
+DEVICE_DIRNAME= STM32G473CBTx
 
 
 
@@ -44,7 +44,8 @@ CORE_CPP_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Core/Src -name "*.cpp")
 
 HAL_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Drivers/STM32G4xx_HAL_Driver -name "*.c")
 
-RTOS_SOURCES =  \
+RTOS_SOURCES = \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
 $(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
 $(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/list.c \
 $(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/queue.c \
@@ -59,9 +60,7 @@ C_SOURCES = $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
 CPP_SOURCES = $(CORE_CPP_SOURCES)
 
 # ASM sources
-ASM_SOURCES =  \
-startup_stm32g473xx.s
-
+ASM_SOURCES = $(DEVICE_DIRNAME)/startup_stm32g473xx.s
 
 #######################################
 # binaries
@@ -106,13 +105,13 @@ AS_DEFS =
 
 # C defines
 C_DEFS =  \
--DUSE_HAL_DRIVER \
--DSTM32G473xx
+-D USE_HAL_DRIVER \
+-D STM32G473xx \
+-D DEBUG
 
 
 # AS includes
-AS_INCLUDES =  \
--ICore\Inc
+AS_INCLUDES = 
 
 # C includes
 C_INCLUDES =  \
@@ -145,7 +144,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = $(DEVICE_DIRNAME)/STM32G405RGTX_FLASH.ld
+LDSCRIPT = $(DEVICE_DIRNAME)/STM32G473CBTx_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys 
