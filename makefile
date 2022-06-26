@@ -14,7 +14,9 @@
 # target
 ######################################
 TARGET = main
+
 TARGET = STM32G473CBTx
+
 
 
 ######################################
@@ -36,41 +38,25 @@ BUILD_DIR = build
 # source
 ######################################
 # C sources
-C_SOURCES =  \
-Core/Src/main.c \
-Core/Src/app_freertos.c \
-Core/Src/stm32g4xx_it.c \
-Core/Src/stm32g4xx_hal_msp.c \
-Core/Src/stm32g4xx_hal_timebase_tim.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_fdcan.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ex.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_flash_ramfunc.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_exti.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_dma_ex.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c_ex.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.c \
-Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.c \
-Core/Src/system_stm32g4xx.c \
-Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
-Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
-Middlewares/Third_Party/FreeRTOS/Source/list.c \
-Middlewares/Third_Party/FreeRTOS/Source/queue.c \
-Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
-Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
-Middlewares/Third_Party/FreeRTOS/Source/timers.c \
-Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
-Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
-Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c  
+# USER_INCLUDES := -I ./inc
+CORE_C_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Core/Src -name "*.c")
+CORE_CPP_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Core/Src -name "*.cpp")
+
+HAL_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Drivers/STM32F4xx_HAL_Driver -name "*.c")
+
+RTOS_SOURCES =  \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/list.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/queue.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/timers.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
+$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
+
+C_SOURCES = $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
+CPP_SOURCES = $(CORE_CPP_SOURCES)
 
 # ASM sources
 ASM_SOURCES =  \
@@ -88,11 +74,13 @@ CC = $(GCC_PATH)/$(PREFIX)gcc
 AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
+CPP_CC = $(GCC_PATH)/$(PREFIX)g++ -std=c++11
 else
 CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc -x assembler-with-cpp
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
+CPP_CC = $(PREFIX)g++ -std=c++11
 endif
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
@@ -128,15 +116,16 @@ AS_INCLUDES =  \
 
 # C includes
 C_INCLUDES =  \
--ICore/Inc \
--IDrivers/STM32G4xx_HAL_Driver/Inc \
--IDrivers/STM32G4xx_HAL_Driver/Inc/Legacy \
--IMiddlewares/Third_Party/FreeRTOS/Source/include \
--IMiddlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
--IMiddlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
--IDrivers/CMSIS/Device/ST/STM32G4xx/Include \
--IDrivers/CMSIS/Include
+-I ./$(DEVICE_DIRNAME)/Core/Inc \
+-I ./$(DEVICE_DIRNAME)/Drivers/STM32F4xx_HAL_Driver/Inc \
+-I ./$(DEVICE_DIRNAME)/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy \
+-I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/include \
+-I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
+-I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
+-I ./$(DEVICE_DIRNAME)/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
+-I ./$(DEVICE_DIRNAME)/Drivers/CMSIS/Include
 
+C_INCLUDES += $(USER_INCLUDES)
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
@@ -156,7 +145,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = STM32G473CBTx_FLASH.ld
+LDSCRIPT = $(DEVICE_DIRNAME)/STM32F405RGTX_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys 
@@ -173,19 +162,32 @@ all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET
 # list of objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
+
+# list of CPP program objects
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
+vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
+
 # list of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR) 
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+	@echo ""
 
-$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
+	$(CPP_CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
+	@echo ""
+
+$(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
+	@echo ""
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS)
+	$(CPP_CC) $(OBJECTS) $(LDFLAGS) -o $@
+	@echo ""
 	$(SZ) $@
+	@echo ""
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(HEX) $< $@
@@ -194,13 +196,21 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(BIN) $< $@	
 	
 $(BUILD_DIR):
-	mkdir $@		
+	mkdir $@
 
 #######################################
 # clean up
 #######################################
 clean:
 	-rm -fR $(BUILD_DIR)
+
+analyze:
+	$(PREFIX)objdump -t $(BUILD_DIR)/$(TARGET).elf
+
+flash:
+	st-flash write $(BUILD_DIR)/main.bin 0x08000000 
+	st-flash reset
+
   
 #######################################
 # dependencies
@@ -208,3 +218,4 @@ clean:
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 # *** EOF ***
+
