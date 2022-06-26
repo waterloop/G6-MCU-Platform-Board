@@ -4,5 +4,6 @@ temp
 */Debug/
 .DS_Store
 .vscode
+.cache
 
 null.d

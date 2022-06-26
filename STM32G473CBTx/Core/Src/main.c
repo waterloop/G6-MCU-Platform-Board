@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
+#include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -110,6 +110,9 @@ int main(void)
 
   /* Init scheduler */
   osKernelInitialize();
+
+  osMutexId_t testMutex = osMutexCreate(NULL);
+  osMutexAcquire(&testMutex, osWaitForever);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
