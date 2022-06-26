@@ -42,7 +42,7 @@ BUILD_DIR = build
 CORE_C_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Core/Src -name "*.c")
 CORE_CPP_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Core/Src -name "*.cpp")
 
-HAL_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Drivers/STM32F4xx_HAL_Driver -name "*.c")
+HAL_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Drivers/STM32G4xx_HAL_Driver -name "*.c")
 
 RTOS_SOURCES =  \
 $(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
@@ -117,12 +117,12 @@ AS_INCLUDES =  \
 # C includes
 C_INCLUDES =  \
 -I ./$(DEVICE_DIRNAME)/Core/Inc \
--I ./$(DEVICE_DIRNAME)/Drivers/STM32F4xx_HAL_Driver/Inc \
--I ./$(DEVICE_DIRNAME)/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy \
+-I ./$(DEVICE_DIRNAME)/Drivers/STM32G4xx_HAL_Driver/Inc \
+-I ./$(DEVICE_DIRNAME)/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy \
 -I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/include \
 -I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
 -I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
--I ./$(DEVICE_DIRNAME)/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
+-I ./$(DEVICE_DIRNAME)/Drivers/CMSIS/Device/ST/STM32G4xx/Include \
 -I ./$(DEVICE_DIRNAME)/Drivers/CMSIS/Include
 
 C_INCLUDES += $(USER_INCLUDES)
@@ -145,7 +145,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = $(DEVICE_DIRNAME)/STM32F405RGTX_FLASH.ld
+LDSCRIPT = $(DEVICE_DIRNAME)/STM32G405RGTX_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys 
