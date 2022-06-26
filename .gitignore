@@ -1,0 +1,8 @@
+build
+bin
+temp
+*/Debug/
+.DS_Store
+.vscode
+
+null.d
