@@ -14,6 +14,6 @@ analyze:
 
 .PHONY: flash
 flash:
-	st-flash write $(BUILD_DIR)/standalone/main.bin 0x08000000 
+	st-flash write $(BUILD_DIR)/standalone/main.bin 0x08000000
 	st-flash reset
 

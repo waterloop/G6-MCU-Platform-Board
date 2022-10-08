@@ -1,9 +1,7 @@
 #pragma once
-#include "stm32g473xx.h"
-#include "stm32g4xx_hal_fdcan.h"
+#include "main.h"
 
 struct CanDriver {
-    CanDriver();
 
     enum class FDCANOperatingMode : uint32_t {
         Normal = FDCAN_MODE_NORMAL,
@@ -56,6 +54,25 @@ struct CanDriver {
 
     };
 
+    /**
+     * @brief Initalized the Can Driver
+     * This function should only be called once in the setup of the
+     * application.
+     *
+     */
+    void initialize();
+
+    /**
+     * @brief Get the Single Instance of the Can Driver
+     * The CAN Driver is designed with a singleton pattern due
+     * to it's association with physical hardware.
+     *
+     * @return CanDriver*
+     */
+    static CanDriver &getInstance() {
+        static CanDriver canDriver;
+        return canDriver;
+    }
 
     /**
      * @brief Set the Operating Mode of the can bus
@@ -88,6 +105,11 @@ struct CanDriver {
     bool canRead(uint32_t rxFifo = FDCAN_RX_FIFO0);
 
     bool read(RxMessage &msg, uint32_t rxFifo = FDCAN_RX_FIFO0);
+
+protected:
+    CanDriver();
+
 private:
     FDCAN_HandleTypeDef &canHandle;
+    bool initialized;
 };

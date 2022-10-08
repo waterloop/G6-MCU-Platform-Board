@@ -1,36 +1,42 @@
 #include "can.hpp"
-#include "stm32g4xx_hal_def.h"
-#include "stm32g4xx.h"
-
-#include "main.h"
 static FDCAN_HandleTypeDef hfdcan1;
 static uint8_t messageMarkerGenerator = 0;
 
-CanDriver::CanDriver()
-    : canHandle(hfdcan1) {
-    canHandle.Instance = FDCAN1;
-    canHandle.Init.ClockDivider = FDCAN_CLOCK_DIV1;
-    canHandle.Init.FrameFormat = FDCAN_FRAME_FD_NO_BRS;
-    canHandle.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
-    canHandle.Init.AutoRetransmission = DISABLE;
-    canHandle.Init.TransmitPause = DISABLE;
-    canHandle.Init.ProtocolException = DISABLE;
-    canHandle.Init.NominalPrescaler = 1;
-    canHandle.Init.NominalSyncJumpWidth = 1;
-    canHandle.Init.NominalTimeSeg1 = 2;
-    canHandle.Init.NominalTimeSeg2 = 2;
-    canHandle.Init.DataPrescaler = 1;
-    canHandle.Init.DataSyncJumpWidth = 1;
-    canHandle.Init.DataTimeSeg1 = 1;
-    canHandle.Init.DataTimeSeg2 = 1;
-    canHandle.Init.StdFiltersNbr = 0;
-    canHandle.Init.ExtFiltersNbr = 0;
-    canHandle.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
-    if (HAL_FDCAN_Init(&canHandle) != HAL_OK)
-    {
-        Error_Handler();
+void CanDriver::initialize() {
+    /**
+     * CRITICAL SECTION: This initializer should only be called before
+     * starting any threaded activities. But in the case that it is not,
+     * we have placed it in a critical section to prevent it from being
+     * initialized twice.
+    */
+    __disable_irq();
+    if (!initialized) {
+        canHandle.Instance = FDCAN1;
+        canHandle.Init.ClockDivider = FDCAN_CLOCK_DIV1;
+        canHandle.Init.FrameFormat = FDCAN_FRAME_FD_NO_BRS;
+        canHandle.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
+        canHandle.Init.AutoRetransmission = DISABLE;
+        canHandle.Init.TransmitPause = DISABLE;
+        canHandle.Init.ProtocolException = DISABLE;
+        canHandle.Init.NominalPrescaler = 1;
+        canHandle.Init.NominalSyncJumpWidth = 1;
+        canHandle.Init.NominalTimeSeg1 = 2;
+        canHandle.Init.NominalTimeSeg2 = 2;
+        canHandle.Init.DataPrescaler = 1;
+        canHandle.Init.DataSyncJumpWidth = 1;
+        canHandle.Init.DataTimeSeg1 = 1;
+        canHandle.Init.DataTimeSeg2 = 1;
+        canHandle.Init.StdFiltersNbr = 0;
+        canHandle.Init.ExtFiltersNbr = 0;
+        canHandle.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
+        if (HAL_FDCAN_Init(&canHandle) != HAL_OK)
+        {
+            Error_Handler();
+        }
+        HAL_FDCAN_Start(&canHandle);
+        initialized = true;
     }
-    HAL_FDCAN_Start();
+    __enable_irq();
 }
 
 bool CanDriver::setOperatingMode(FDCANOperatingMode newOperatingMode) {
@@ -64,11 +70,11 @@ bool CanDriver::setOperatingMode(FDCANOperatingMode newOperatingMode) {
 
 uint32_t CanDriver::write(Message &msg) {
     FDCAN_TxHeaderTypeDef header = {
-        .Identifier = msg.identifier,
+        .Identifier = (uint32_t)msg.identifier,
         .IdType = FDCAN_STANDARD_ID,
         .TxFrameType = FDCAN_DATA_FRAME,
         .DataLength = msg.dataLength,
-        .ErrorStateIndicator = msg.errorStateIndicator,
+        .ErrorStateIndicator = (uint32_t)msg.errorStateIndicator,
         .BitRateSwitch = FDCAN_BRS_OFF,
         .FDFormat = FDCAN_FD_CAN,
         .TxEventFifoControl = FDCAN_NO_TX_EVENTS, // NOTE: For now. Don't store any tx events. May parameterize this later if needed.
@@ -91,11 +97,14 @@ bool CanDriver::read(RxMessage &msg, uint32_t rxFifo ) {
     FDCAN_RxHeaderTypeDef rxHeader;
     HAL_FDCAN_GetRxMessage(&canHandle, rxFifo, &rxHeader, msg.data);
     msg.dataLength = rxHeader.DataLength;
-    msg.identifier = rxHeader.Identifier;
-    msg.errorStateIndicator = rxHeader.ErrorStateIndicator;
+    msg.setId(rxHeader.Identifier);
+    msg.setESI(rxHeader.ErrorStateIndicator);
     msg.filterIndex = rxHeader.FilterIndex;
     return true;
 }
+
+CanDriver::CanDriver()
+    : canHandle(hfdcan1) {}
 
 CanDriver::Message::Message(CanDriver::Message::Id id,
                             uint8_t *data,

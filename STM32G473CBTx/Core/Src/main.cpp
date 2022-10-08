@@ -101,7 +101,8 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  auto canDriver = CanDriver::getInstance();
+  canDriver.initialize();
   /* USER CODE END 2 */
 
   /* Init scheduler */
