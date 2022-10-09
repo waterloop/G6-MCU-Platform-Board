@@ -5,5 +5,8 @@ temp
 .DS_Store
 .vscode
 .cache
+.cproject
+.osx.project
+.project
 
 null.d
