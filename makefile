@@ -48,7 +48,7 @@ C_SOURCES = $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
 CPP_SOURCES = $(CORE_CPP_SOURCES)
 
 # ASM sources
-ASM_SOURCES = $(DEVICE_DIRNAME)/startup_stm32g473xx.s
+ASM_SOURCES = $(DEVICE_DIRNAME)/Core/Startup/startup_stm32g473cbtx.s
 
 #######################################
 # binaries
