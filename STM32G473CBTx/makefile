@@ -3,10 +3,6 @@
 ######################################
 TARGET = main
 
-# DEVICE_DIRNAME= STM32G473CBTx
-
-
-
 ######################################
 # building variables
 ######################################
@@ -20,15 +16,22 @@ OPT = -Og
 # paths
 #######################################
 # Build path
-BUILD_DIR = build
+
+OBJECTS_DIR = $(BUILD_DIR)/objects
+PLATFORM_LIB_DIR = $(BUILD_DIR)/platform
+STANDALONE_DIR = $(BUILD_DIR)/standalone
 
 ######################################
 # source
 ######################################
 # C sources
-# USER_INCLUDES := -I ./inc
+
+MAIN_SOURCE := ./Core/Src/main.cpp
+
+PLATFORM_SOURCES := $(shell find ../platform/src -name "*.c")
+
 CORE_C_SOURCES := $(shell find ./Core/Src -name "*.c")
-CORE_CPP_SOURCES := $(shell find ./Core/Src -name "*.cpp")
+CORE_CPP_SOURCES := $(shell find ./Core/Src -name "*.cpp" | grep -v "main.cpp")
 
 HAL_SOURCES := $(shell find ./Drivers/STM32G4xx_HAL_Driver -name "*.c")
 
@@ -44,8 +47,8 @@ RTOS_SOURCES = \
 ./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
 ./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
 
-C_SOURCES = $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
-CPP_SOURCES = $(CORE_CPP_SOURCES)
+C_SOURCES = $(PLATFORM_SOURCES) $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
+CPP_SOURCES = $(MAIN_SOURCE) $(CORE_CPP_SOURCES)
 
 # ASM sources
 ASM_SOURCES = ./Core/Startup/startup_stm32g473cbtx.s
@@ -61,12 +64,14 @@ CC = $(GCC_PATH)/$(PREFIX)gcc
 AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
+AR = $(GCC_PATH)/$(PREFIX)ar
 CPP_CC = $(GCC_PATH)/$(PREFIX)g++ -std=c++11
 else
 CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc -x assembler-with-cpp
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
+AR = $(PREFIX)ar
 CPP_CC = $(PREFIX)g++ -std=c++11
 endif
 HEX = $(CP) -O ihex
@@ -110,7 +115,8 @@ C_INCLUDES =  \
 -I ./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
 -I ./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
 -I ./Drivers/CMSIS/Device/ST/STM32G4xx/Include \
--I ./Drivers/CMSIS/Include
+-I ./Drivers/CMSIS/Include \
+-I ../platform/inc
 
 C_INCLUDES += $(USER_INCLUDES)
 
@@ -137,40 +143,49 @@ LDSCRIPT = ./STM32G473CBTx_FLASH.ld
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
-LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(STANDALONE_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 
 # default action: build all
-all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
+all: $(STANDALONE_DIR)/$(TARGET).elf $(STANDALONE_DIR)/$(TARGET).hex $(STANDALONE_DIR)/$(TARGET).bin $(PLATFORM_LIB_DIR)/platform.a
 
 
 #######################################
 # build the application
 #######################################
 # list of objects
-OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
+OBJECTS = $(addprefix $(OBJECTS_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
 
 # list of CPP program objects
-OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
+OBJECTS += $(addprefix $(OBJECTS_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
 vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 
 # list of ASM program objects
-OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
+OBJECTS += $(addprefix $(OBJECTS_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR) 
-	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+PLATFORM_OBJECTS = $(addprefix $(OBJECTS_DIR)/,$(notdir $(PLATFORM_SOURCES:.c=.o)))
+
+$(OBJECTS_DIR)/%.o: %.c | $(BUILD_DIR) 
+	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(OBJECTS_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 	@echo ""
 
-$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
-	$(CPP_CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
+$(OBJECTS_DIR)/%.o: %.cpp | $(BUILD_DIR) 
+	$(CPP_CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(OBJECTS_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 	@echo ""
 
-$(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
+$(OBJECTS_DIR)/%.o: %.s | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 	@echo ""
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS)
+$(PLATFORM_LIB_DIR)/platform.a: $(PLATFORM_OBJECTS)
+	@echo ""
+	$(AR) rvs $@ $(PLATFORM_OBJECTS)
+	@echo ""
+	$(SZ) $@
+	@echo ""
+
+$(STANDALONE_DIR)/$(TARGET).elf: $(OBJECTS)
 	$(CPP_CC) $(OBJECTS) $(LDFLAGS) -o $@
 	@echo ""
 	$(SZ) $@
@@ -183,22 +198,11 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(BIN) $< $@	
 	
 $(BUILD_DIR):
-	mkdir $@
+	mkdir $(BUILD_DIR)
+	mkdir -p $(OBJECTS_DIR)
+	mkdir -p $(PLATFORM_LIB_DIR)
+	mkdir -p $(STANDALONE_DIR)
 
-#######################################
-# clean up
-#######################################
-clean:
-	rm -rf $(BUILD_DIR)
-
-analyze:
-	$(PREFIX)objdump -t $(BUILD_DIR)/$(TARGET).elf
-
-flash:
-	st-flash write $(BUILD_DIR)/main.bin 0x08000000 
-	st-flash reset
-
-  
 #######################################
 # dependencies
 #######################################
