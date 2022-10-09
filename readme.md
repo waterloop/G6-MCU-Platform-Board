@@ -27,7 +27,7 @@ The build will generate the following:
 
 ## Developing for This Repository
 
-## Intellisense and Autocomplete
+### Intellisense and Autocomplete
 Intellisense and autocomplete are available through the `clangd` language server. It is supported on,
 most modern editors.
 
