@@ -27,6 +27,26 @@ The build will generate the following:
 
 ## Developing for This Repository
 
+## Intellisense and Autocomplete
+Intellisense and autocomplete are available through the `clangd` language server. It is supported on,
+most modern editors.
+
+If you use VSCode, there exists an
+[extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
+for it.
+
+`clangd` is already installed on your [vagrant VMs](https://github.com/waterloop/firmware-vagrant).
+It also easily installed through apt and brew if you like.
+
+`clangd` uses the auto-generated file `compile_commands.json` to provide intellisense and autocomplete.
+This file is gitignored in this repository, so you will need to generate it yourself if you want
+intellisense. This can be easily done using `bear`, which is pre-installed on your vagrant VMS.
+
+```
+# this is an example, can replace DEV with whatever device you need
+bear -- make DEV=STM32G473CBTx
+```
+
 ### Code
 
 Write your code in the `platform` directory.
