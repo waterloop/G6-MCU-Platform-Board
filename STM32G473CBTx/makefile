@@ -3,7 +3,7 @@
 ######################################
 TARGET = main
 
-DEVICE_DIRNAME= STM32G473CBTx
+# DEVICE_DIRNAME= STM32G473CBTx
 
 
 
@@ -27,28 +27,28 @@ BUILD_DIR = build
 ######################################
 # C sources
 # USER_INCLUDES := -I ./inc
-CORE_C_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Core/Src -name "*.c")
-CORE_CPP_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Core/Src -name "*.cpp")
+CORE_C_SOURCES := $(shell find ./Core/Src -name "*.c")
+CORE_CPP_SOURCES := $(shell find ./Core/Src -name "*.cpp")
 
-HAL_SOURCES := $(shell find ./$(DEVICE_DIRNAME)/Drivers/STM32G4xx_HAL_Driver -name "*.c")
+HAL_SOURCES := $(shell find ./Drivers/STM32G4xx_HAL_Driver -name "*.c")
 
 RTOS_SOURCES = \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/list.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/queue.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/timers.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
-$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
+./Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
+./Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
+./Middlewares/Third_Party/FreeRTOS/Source/list.c \
+./Middlewares/Third_Party/FreeRTOS/Source/queue.c \
+./Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
+./Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
+./Middlewares/Third_Party/FreeRTOS/Source/timers.c \
+./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
+./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
+./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
 
 C_SOURCES = $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
 CPP_SOURCES = $(CORE_CPP_SOURCES)
 
 # ASM sources
-ASM_SOURCES = $(DEVICE_DIRNAME)/Core/Startup/startup_stm32g473cbtx.s
+ASM_SOURCES = ./Core/Startup/startup_stm32g473cbtx.s
 
 #######################################
 # binaries
@@ -103,14 +103,14 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--I ./$(DEVICE_DIRNAME)/Core/Inc \
--I ./$(DEVICE_DIRNAME)/Drivers/STM32G4xx_HAL_Driver/Inc \
--I ./$(DEVICE_DIRNAME)/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy \
--I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/include \
--I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
--I ./$(DEVICE_DIRNAME)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
--I ./$(DEVICE_DIRNAME)/Drivers/CMSIS/Device/ST/STM32G4xx/Include \
--I ./$(DEVICE_DIRNAME)/Drivers/CMSIS/Include
+-I ./Core/Inc \
+-I ./Drivers/STM32G4xx_HAL_Driver/Inc \
+-I ./Drivers/STM32G4xx_HAL_Driver/Inc/Legacy \
+-I ./Middlewares/Third_Party/FreeRTOS/Source/include \
+-I ./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
+-I ./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
+-I ./Drivers/CMSIS/Device/ST/STM32G4xx/Include \
+-I ./Drivers/CMSIS/Include
 
 C_INCLUDES += $(USER_INCLUDES)
 
@@ -132,7 +132,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = $(DEVICE_DIRNAME)/STM32G473CBTx_FLASH.ld
+LDSCRIPT = ./STM32G473CBTx_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys 
@@ -189,7 +189,7 @@ $(BUILD_DIR):
 # clean up
 #######################################
 clean:
-	-rm -fR $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 analyze:
 	$(PREFIX)objdump -t $(BUILD_DIR)/$(TARGET).elf
