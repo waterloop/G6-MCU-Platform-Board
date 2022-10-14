@@ -269,6 +269,19 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
+  CanDriver can = CanDriver::getInstance();
+  uint8_t data[8];
+  uint8_t rx_data[8];
+  for (int i = 0; i < 8; i++) {
+    data[i] = i;
+    rx_data[i] = 0;
+  }
+  CanDriver::Message msg(CanDriver::Message::Id::RelayFaultDetected, data, 8);
+  uint32_t id = can.write(msg);
+  can.awaitWrite(id);
+  while (!can.canRead());
+  CanDriver::RxMessage rxmsg(rx_data, 8);
+  can.read(rxmsg);
   for(;;)
   {
     osDelay(1);
