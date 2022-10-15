@@ -1,7 +1,7 @@
 ######################################
 # target
 ######################################
-TARGET = main
+TARGET = nucleo
 
 ######################################
 # building variables
@@ -28,30 +28,19 @@ STANDALONE_DIR = $(BUILD_DIR)/standalone
 
 MAIN_SOURCE := ./Core/Src/main.cpp
 
-PLATFORM_SOURCES := $(shell find ../platform/src -name "*.c")
+PLATFORM_C_SOURCES := $(shell find ../platform/src -name "*.c")
+PLATFORM_CPP_SOURCES := $(shell find ../platform/src -name "*.c")
 
 CORE_C_SOURCES := $(shell find ./Core/Src -name "*.c")
 CORE_CPP_SOURCES := $(shell find ./Core/Src -name "*.cpp" | grep -v "main.cpp")
 
 HAL_SOURCES := $(shell find ./Drivers/STM32G4xx_HAL_Driver -name "*.c")
 
-RTOS_SOURCES = \
-../Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
-../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
-../Middlewares/Third_Party/FreeRTOS/Source/list.c \
-../Middlewares/Third_Party/FreeRTOS/Source/queue.c \
-../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
-../Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
-../Middlewares/Third_Party/FreeRTOS/Source/timers.c \
-../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
-../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
-../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
-
-C_SOURCES = $(PLATFORM_SOURCES) $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
-CPP_SOURCES = $(MAIN_SOURCE) $(CORE_CPP_SOURCES)
+C_SOURCES = $(PLATFORM_C_SOURCES) $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
+CPP_SOURCES = $(MAIN_SOURCE)  $(PLATFORM_CPP_SOURCES) $(CORE_CPP_SOURCES)
 
 # ASM sources
-ASM_SOURCES = ./Core/Startup/startup_stm32g473cbtx.s
+ASM_SOURCES = ./startup_stm32g431xx.s
 
 #######################################
 # binaries
@@ -99,7 +88,7 @@ AS_DEFS =
 # C defines
 C_DEFS =  \
 -D USE_HAL_DRIVER \
--D STM32G473xx \
+-D STM32G431xx \
 -D DEBUG
 
 
@@ -125,6 +114,8 @@ ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffuncti
 
 CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
+CPPFLAGS = -fno-rtti -fno-exceptions
+
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
 endif
@@ -138,7 +129,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = ./STM32G473CBTx_FLASH.ld
+LDSCRIPT = ./STM32G431KBTx_FLASH.ld
 
 # libraries
 LIBS = -lc -lm -lnosys
@@ -171,7 +162,7 @@ $(OBJECTS_DIR)/%.o: %.c | $(BUILD_DIR)
 	@echo ""
 
 $(OBJECTS_DIR)/%.o: %.cpp | $(BUILD_DIR)
-	$(CPP_CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(OBJECTS_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
+	$(CPP_CC) -c $(CFLAGS) $(CPPFLAGS) -Wa,-a,-ad,-alms=$(OBJECTS_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 	@echo ""
 
 $(OBJECTS_DIR)/%.o: %.s | $(BUILD_DIR)

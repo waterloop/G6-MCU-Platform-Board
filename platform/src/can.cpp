@@ -11,29 +11,12 @@ void CanDriver::initialize() {
     */
     __disable_irq();
     if (!initialized) {
-        canHandle.Instance = FDCAN1;
-        canHandle.Init.ClockDivider = FDCAN_CLOCK_DIV1;
-        canHandle.Init.FrameFormat = FDCAN_FRAME_FD_NO_BRS;
-        canHandle.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
-        canHandle.Init.AutoRetransmission = DISABLE;
-        canHandle.Init.TransmitPause = DISABLE;
-        canHandle.Init.ProtocolException = DISABLE;
-        canHandle.Init.NominalPrescaler = 1;
-        canHandle.Init.NominalSyncJumpWidth = 1;
-        canHandle.Init.NominalTimeSeg1 = 2;
-        canHandle.Init.NominalTimeSeg2 = 2;
-        canHandle.Init.DataPrescaler = 1;
-        canHandle.Init.DataSyncJumpWidth = 1;
-        canHandle.Init.DataTimeSeg1 = 1;
-        canHandle.Init.DataTimeSeg2 = 1;
-        canHandle.Init.StdFiltersNbr = 0;
-        canHandle.Init.ExtFiltersNbr = 0;
-        canHandle.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
-        if (HAL_FDCAN_Init(&canHandle) != HAL_OK)
-        {
+        if (&canHandle == &hfdcan1) {
+            MX_FDCAN1_Init();
+        } else {
             Error_Handler();
         }
-        HAL_FDCAN_Start(&canHandle);
+
         initialized = true;
     }
     __enable_irq();
