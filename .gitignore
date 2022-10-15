@@ -6,4 +6,10 @@ temp
 .vscode
 .cache
 
+.cproject
+.osx.project
+.project
+
+compile_commands.json
+
 null.d
