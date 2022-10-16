@@ -24,6 +24,7 @@ constexpr CanFilterConfiguration DEFAULT_FILTER_CONFIG = CanFilterConfiguration:
 constexpr CanRxFifo DEFAULT_RX_FIFO = CanRxFifo::FIFO0;
 constexpr uint32_t MAX_FILTER_ID = 0x7FF;
 constexpr uint32_t MAX_NUM_FILTERS = 28;
+ constexpr size_t CAN_MAX_DATA_LENGTH = 64;
 
 template<typename T, typename... Args>
 static constexpr inline bool is_type() {
@@ -90,17 +91,14 @@ public:
 };
 
 struct CanMessage {
-    static constexpr size_t MAX_DATA_LENGTH = 64;
-    static constexpr uint32_t MAX_UINT32 = 0xffffffff;
-
     enum class ESI : uint32_t {
         ERROR_ACTIVE  = FDCAN_ESI_ACTIVE,
         ERROR_PASSIVE = FDCAN_ESI_PASSIVE,
 
-        UNKNOWN_ERROR_STATE = MAX_UINT32,
+        UNKNOWN_ERROR_STATE = UINT32_MAX,
     };
 
-    CanMessage(CanMessageId id, uint8_t *data, uint32_t data_length=MAX_DATA_LENGTH);
+    CanMessage(CanMessageId id, uint8_t *data, uint32_t data_length=CAN_MAX_DATA_LENGTH);
 
     void set_id(uint32_t id);
     void set_ESI(uint32_t esi);
@@ -113,7 +111,7 @@ struct CanMessage {
 };
 
 struct RxCanMessage : public CanMessage {
-    RxCanMessage(uint8_t *data, uint32_t data_length=MAX_DATA_LENGTH);
+    RxCanMessage(uint8_t *data, uint32_t data_length=CAN_MAX_DATA_LENGTH);
     uint32_t filter_index=0;
 
 };
@@ -193,7 +191,7 @@ struct CanDriver {
      */
     void await_write(uint32_t &txId);
 
-    [[nodiscard]] bool rx_ready(CanRxFifo rxFifo = DEFAULT_RX_FIFO);
+    [[nodiscard]] bool read_ready(CanRxFifo rxFifo = DEFAULT_RX_FIFO);
 
     [[nodiscard]] bool read(RxCanMessage &msg, CanRxFifo rxFifo = DEFAULT_RX_FIFO);
 

@@ -136,7 +136,7 @@ void CanDriver::test_driver() {
     CanMessage msg(CanMessageId::RelayFaultDetected, data, 8);
     uint32_t id = write(msg);
     await_write(id);
-    while (!rx_ready(CanRxFifo::FIFO0));
+    while (!read_ready(CanRxFifo::FIFO0));
     RxCanMessage rxmsg(rx_data, 64);
     if (!read(rxmsg)) { Error_Handler(); }
     for (int i = 0; i < 8; i++) {
@@ -152,7 +152,7 @@ void CanDriver::test_driver() {
     msg = CanMessage(CanMessageId::LVSensingFaultDetected, data, 8);
     id = write(msg);
     await_write(id);
-    while (!rx_ready(CanRxFifo::FIFO0));
+    while (!read_ready(CanRxFifo::FIFO0));
     rxmsg = RxCanMessage(rx_data, 64);
     if (!read(rxmsg)) { Error_Handler(); }
     for (int i = 0; i < 8; i++) {
@@ -245,12 +245,12 @@ void CanDriver::await_write(uint32_t &txId) {
     while (HAL_FDCAN_IsTxBufferMessagePending(&can_handle, txId));
 }
 
-bool CanDriver::rx_ready(CanRxFifo rxFifo ) {
+bool CanDriver::read_ready(CanRxFifo rxFifo ) {
     return HAL_FDCAN_GetRxFifoFillLevel(&can_handle, (uint32_t)rxFifo) > 0;
 }
 
 bool CanDriver::read(RxCanMessage &msg, CanRxFifo rxFifo ) {
-    if (!rx_ready(rxFifo)) { return false; }
+    if (!read_ready(rxFifo)) { return false; }
     FDCAN_RxHeaderTypeDef rxHeader;
     if (HAL_FDCAN_GetRxMessage(&can_handle,
                                (uint32_t)rxFifo,
