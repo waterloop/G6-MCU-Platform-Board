@@ -1,9 +1,136 @@
 #pragma once
 #include "fdcan.h"
+#include "stdint.h"
+#include <type_traits>
+
+enum class CanFilterConfiguration : uint32_t {
+    Disable = FDCAN_FILTER_DISABLE,
+    RxFIFO0 = FDCAN_FILTER_TO_RXFIFO0,
+    RxFIFO1 = FDCAN_FILTER_TO_RXFIFO1,
+    Reject = FDCAN_FILTER_REJECT,
+    HighPriority = FDCAN_FILTER_HP,
+    HighPriorityRxFIFO0 = FDCAN_FILTER_TO_RXFIFO0_HP,
+    HighPriorityRxFIFO1 = FDCAN_FILTER_TO_RXFIFO1_HP,
+};
+
+enum class CanRxFifo : uint32_t {
+    FIFO0 = FDCAN_RX_FIFO0,
+    FIFO1 = FDCAN_RX_FIFO1,
+};
+
+// We may want to parameterize this in the future, but for now just use rxfifo 0
+constexpr CanFilterConfiguration DEFAULT_FILTER_CONFIG = CanFilterConfiguration::RxFIFO0;
+constexpr CanRxFifo DEFAULT_RX_FIFO = CanRxFifo::FIFO0;
+constexpr uint32_t MAX_FILTER_ID = 0x7FF;
+constexpr uint32_t MAX_NUM_FILTERS = 28;
+
+template<typename T, typename... Args>
+static constexpr inline bool is_type() {
+    return (std::is_same<T, Args>::value && ...);
+}
+
+class CanDriver;
+
+class CanMessageFilter {
+    friend class CanDriver; // gives CanDriver access to the filter;
+    FDCAN_FilterTypeDef filter;
+
+    CanMessageFilter();
+    CanMessageFilter(uint32_t filter_type, uint32_t filter_config, uint32_t filter_id1, uint32_t filter_id2);
+public:
+    /**
+     * @brief Create a Range Filter
+     * Creates a filter which matches messages with ids
+     * id_range_start to id_range_end, including these two ids
+     *
+     * @param id_range_start
+     * @param id_range_end
+     * @return CanMessageFilter
+     */
+    static CanMessageFilter RangeFilter(uint32_t id_range_start, uint32_t id_range_end) {
+        return CanMessageFilter(FDCAN_FILTER_RANGE,
+                                (uint32_t)DEFAULT_FILTER_CONFIG,
+                                id_range_start,
+                                id_range_end);
+    }
+
+    /**
+     * @brief Create a Dual Filter
+     * Creates a filter which matches on either id_1 or id_2
+     *
+     * @param id_1
+     * @param id_2
+     * @return CanMessageFilter
+     */
+    static CanMessageFilter DualFilter(uint32_t id_1, uint32_t id_2) {
+        return CanMessageFilter(FDCAN_FILTER_RANGE,
+                                (uint32_t)DEFAULT_FILTER_CONFIG,
+                                id_1,
+                                id_2);
+    }
+
+    /**
+     * @brief Creates a Mask Filter
+     * Matches a message_id according to the following relation
+     * (filter & mask) == (message_id & mask)
+     *
+     * @note a mask of 0x00 will match all messages, regardless of filter
+     *
+     * @param filter
+     * @param mask
+     * @return CanMessageFilter
+     */
+    static CanMessageFilter MaskFilter(uint32_t filter, uint32_t mask) {
+        return CanMessageFilter(FDCAN_FILTER_MASK,
+                                (uint32_t)DEFAULT_FILTER_CONFIG,
+                                filter,
+                                mask);
+    }
+};
+
+struct CanMessage {
+    static constexpr size_t MAX_DATA_LENGTH = 64;
+    static constexpr uint32_t MAX_UINT32 = 0xffffffff;
+
+    enum Id : uint32_t {
+        RelayFaultDetected      = 0x00,
+        BmsFaultDetected        = 0x01,
+        McFaultDetected         = 0x02,
+        LVSensingFaultDetected  = 0x03,
+
+
+        // TODO Fill out with the rest of the values
+        DefaultRx = MAX_UINT32,
+    };
+
+    enum class ESI : uint32_t {
+        ERROR_ACTIVE  = FDCAN_ESI_ACTIVE,
+        ERROR_PASSIVE = FDCAN_ESI_PASSIVE,
+
+        UNKNOWN_ERROR_STATE = MAX_UINT32,
+    };
+
+    CanMessage(Id id, uint8_t *data, uint32_t data_length=MAX_DATA_LENGTH);
+
+    void set_id(uint32_t id);
+    void set_ESI(uint32_t esi);
+
+    Id identifier;
+    ESI error_state_indicator = ESI::ERROR_PASSIVE;
+    uint8_t message_marker;
+    uint8_t* data;
+    uint32_t data_length;
+};
+
+struct RxCanMessage : public CanMessage {
+    RxCanMessage(uint8_t *data, uint32_t data_length=MAX_DATA_LENGTH);
+    uint32_t filter_index=0;
+
+};
 
 struct CanDriver {
 
-    enum class FDCANOperatingMode : uint32_t {
+    enum class OperatingMode : uint32_t {
         Normal = FDCAN_MODE_NORMAL,
         RestrictedOperation,
         BusMonitoring,
@@ -12,55 +139,21 @@ struct CanDriver {
     };
 
 
-    struct Message {
-        static constexpr size_t MAX_DATA_LENGTH = 64;
-        static constexpr uint32_t MAX_UINT32 = 0xffffffff;
-
-        using Marker = uint8_t;
-
-        enum class Id : uint32_t {
-            RelayFaultDetected      = 0x00,
-            BmsFaultDetected        = 0x01,
-            McFaultDetected         = 0x02,
-            LVSensingFaultDetected  = 0x03,
-
-
-            // TODO Fill out with the rest of the values
-            DefaultRx = MAX_UINT32,
-        };
-
-        enum class ESI : uint32_t {
-            ERROR_ACTIVE  = FDCAN_ESI_ACTIVE,
-            ERROR_PASSIVE = FDCAN_ESI_PASSIVE,
-
-            UNKNOWN_ERROR_STATE = MAX_UINT32,
-        };
-
-        Message(Id id, uint8_t *data, uint32_t dataLength=MAX_DATA_LENGTH);
-
-        void setId(uint32_t id);
-        void setESI(uint32_t esi);
-
-        Id identifier;
-        ESI errorStateIndicator = ESI::ERROR_PASSIVE;
-        Marker messageMarker;
-        uint8_t* data;
-        uint32_t dataLength;
-    };
-
-    struct RxMessage : public Message {
-        RxMessage(uint8_t *data, uint32_t dataLength=MAX_DATA_LENGTH);
-        uint32_t filterIndex=0;
-
-    };
-
     /**
      * @brief Initalized the Can Driver
      * This function should only be called once in the setup of the
      * application.
      *
      */
-    void initialize();
+    void initialize(OperatingMode initial_operating_mode=OperatingMode::InternalLoopback);
+
+    /**
+     * @brief Test the CAN Driver
+     * A diagnostic tool for testing the can driver.
+     * Disconnects the Device from the CAN bus, runs some tests,
+     * and then places the device back on the CAN bus.
+     */
+    void test_driver();
 
     /**
      * @brief Get the Single Instance of the Can Driver
@@ -69,30 +162,38 @@ struct CanDriver {
      *
      * @return CanDriver*
      */
-    static CanDriver &getInstance() {
-        static CanDriver canDriver;
-        return canDriver;
+    static CanDriver &get_driver() {
+        static CanDriver can_driver;
+        return can_driver;
     }
+
+    /**
+     * @brief Get the operating mode
+     * Determine the current operating mode of the CAN Driver
+     *
+     * @return OperatingMode
+     */
+    OperatingMode get_operating_mode() const;
 
     /**
      * @brief Set the Operating Mode of the can bus
      * takes the device off of the can bus, switches operating modes to the mode
      * specified, then places the device back on the can bus.
      *
-     * @param newOperatingMode
+     * @param new_operating_mode
      * @return true
      * @return false
      */
-    bool setOperatingMode(FDCANOperatingMode newOperatingMode);
+    [[nodiscard]] bool set_operating_mode(OperatingMode new_operating_mode);
 
     /**
      * @brief A non blocking write to the CAN bus
      *
      * @return uint32_t
-     * The returned txId can be used with awaitWrite to
+     * The returned txId can be used with await_write to
      * block until the message is sent on the bus.
      */
-    uint32_t write(Message &msg);
+    uint32_t write(CanMessage &msg);
 
     /**
      * @brief Block until the message specified by txId
@@ -100,16 +201,40 @@ struct CanDriver {
      *
      * @param txId
      */
-    void awaitWrite(uint32_t &txId);
+    void await_write(uint32_t &txId);
 
-    bool canRead(uint32_t rxFifo = FDCAN_RX_FIFO0);
+    [[nodiscard]] bool rx_ready(CanRxFifo rxFifo = DEFAULT_RX_FIFO);
 
-    bool read(RxMessage &msg, uint32_t rxFifo = FDCAN_RX_FIFO0);
+    [[nodiscard]] bool read(RxCanMessage &msg, CanRxFifo rxFifo = DEFAULT_RX_FIFO);
+
+
+    template<typename... Filter>
+    [[nodiscard]] bool push_filters(Filter... filter) {
+        static_assert(is_type<CanMessageFilter, Filter...>(),
+        "Filter should be of type CanMessageFilter");
+        auto result = false;
+        auto status = HAL_FDCAN_Stop(&can_handle);
+        if (status != HAL_OK) { Error_Handler(); }
+        result = (push_filter(filter) && ...);
+        status = HAL_FDCAN_Start(&can_handle);
+        if (status != HAL_OK) { Error_Handler(); }
+
+        return result;
+    }
+
+    [[nodiscard]] bool match_all_ids();
 
 protected:
     CanDriver();
 
+    [[nodiscard]] bool push_filter(CanMessageFilter &filter);
+
+    [[nodiscard]] uint32_t get_data_length_code_from_byte_length(uint32_t byte_length);
+
 private:
-    FDCAN_HandleTypeDef &canHandle;
+    FDCAN_HandleTypeDef &can_handle;
     bool initialized;
+    OperatingMode operating_mode;
+    uint32_t num_filters;
+    CanMessageFilter message_filters[MAX_NUM_FILTERS];
 };

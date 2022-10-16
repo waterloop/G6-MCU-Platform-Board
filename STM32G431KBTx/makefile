@@ -29,7 +29,7 @@ STANDALONE_DIR = $(BUILD_DIR)/standalone
 MAIN_SOURCE := ./Core/Src/main.cpp
 
 PLATFORM_C_SOURCES := $(shell find ../platform/src -name "*.c")
-PLATFORM_CPP_SOURCES := $(shell find ../platform/src -name "*.c")
+PLATFORM_CPP_SOURCES := $(shell find ../platform/src -name "*.cpp")
 
 CORE_C_SOURCES := $(shell find ./Core/Src -name "*.c")
 CORE_CPP_SOURCES := $(shell find ./Core/Src -name "*.cpp" | grep -v "main.cpp")
@@ -54,14 +54,14 @@ AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
 AR = $(GCC_PATH)/$(PREFIX)ar
-CPP_CC = $(GCC_PATH)/$(PREFIX)g++ -std=c++11
+CPP_CC = $(GCC_PATH)/$(PREFIX)g++ -std=c++17
 else
 CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc -x assembler-with-cpp
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
 AR = $(PREFIX)ar
-CPP_CC = $(PREFIX)g++ -std=c++11
+CPP_CC = $(PREFIX)g++ -std=c++17
 endif
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
@@ -147,7 +147,7 @@ all: $(STANDALONE_DIR)/$(TARGET).elf $(STANDALONE_DIR)/$(TARGET).hex $(STANDALON
 OBJECTS = $(addprefix $(OBJECTS_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
 
-# list of CPP program objects
+# list of CPP program
 OBJECTS += $(addprefix $(OBJECTS_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
 vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 

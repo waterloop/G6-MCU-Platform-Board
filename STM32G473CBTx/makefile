@@ -28,7 +28,8 @@ STANDALONE_DIR = $(BUILD_DIR)/standalone
 
 MAIN_SOURCE := ./Core/Src/main.cpp
 
-PLATFORM_SOURCES := $(shell find ../platform/src -name "*.c")
+PLATFORM_C_SOURCES := $(shell find ../platform/src -name "*.c")
+PLATFORM_CPP_SOURCES := $(shell find ../platform/src -name "*.cpp")
 
 CORE_C_SOURCES := $(shell find ./Core/Src -name "*.c")
 CORE_CPP_SOURCES := $(shell find ./Core/Src -name "*.cpp" | grep -v "main.cpp")
@@ -36,19 +37,19 @@ CORE_CPP_SOURCES := $(shell find ./Core/Src -name "*.cpp" | grep -v "main.cpp")
 HAL_SOURCES := $(shell find ./Drivers/STM32G4xx_HAL_Driver -name "*.c")
 
 RTOS_SOURCES = \
-../Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
-../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
-../Middlewares/Third_Party/FreeRTOS/Source/list.c \
-../Middlewares/Third_Party/FreeRTOS/Source/queue.c \
-../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
-../Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
-../Middlewares/Third_Party/FreeRTOS/Source/timers.c \
-../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
-../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
-../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
+./Middlewares/Third_Party/FreeRTOS/Source/croutine.c \
+./Middlewares/Third_Party/FreeRTOS/Source/event_groups.c \
+./Middlewares/Third_Party/FreeRTOS/Source/list.c \
+./Middlewares/Third_Party/FreeRTOS/Source/queue.c \
+./Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c \
+./Middlewares/Third_Party/FreeRTOS/Source/tasks.c \
+./Middlewares/Third_Party/FreeRTOS/Source/timers.c \
+./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c \
+./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c \
+./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
 
-C_SOURCES = $(PLATFORM_SOURCES) $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
-CPP_SOURCES = $(MAIN_SOURCE) $(CORE_CPP_SOURCES)
+C_SOURCES = $(PLATFORM_C_SOURCES) $(CORE_C_SOURCES) $(HAL_SOURCES) $(RTOS_SOURCES)
+CPP_SOURCES = $(MAIN_SOURCE) $(CORE_CPP_SOURCES) $(PLATFORM_CPP_SOURCES)
 
 # ASM sources
 ASM_SOURCES = ./Core/Startup/startup_stm32g473cbtx.s
@@ -65,14 +66,14 @@ AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
 AR = $(GCC_PATH)/$(PREFIX)ar
-CPP_CC = $(GCC_PATH)/$(PREFIX)g++ -std=c++11
+CPP_CC = $(GCC_PATH)/$(PREFIX)g++ -std=c++17
 else
 CC = $(PREFIX)gcc
 AS = $(PREFIX)gcc -x assembler-with-cpp
 CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
 AR = $(PREFIX)ar
-CPP_CC = $(PREFIX)g++ -std=c++11
+CPP_CC = $(PREFIX)g++ -std=c++17
 endif
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S

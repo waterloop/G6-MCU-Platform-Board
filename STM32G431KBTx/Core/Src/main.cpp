@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "fdcan.h"
+#include "can.hpp"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -56,7 +56,9 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void finished() {
+  while(1) {}
+}
 /* USER CODE END 0 */
 
 /**
@@ -87,11 +89,27 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_FDCAN1_Init();
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  CanDriver can_driver = CanDriver::get_driver();
+  can_driver.initialize();
+  if (!can_driver.push_filters(
+    CanMessageFilter::DualFilter(
+      CanMessage::Id::RelayFaultDetected,
+      CanMessage::Id::RelayFaultDetected
+    ),
+    CanMessageFilter::DualFilter(
+      CanMessage::Id::LVSensingFaultDetected,
+      CanMessage::Id::LVSensingFaultDetected
+    )
+  )) {
+    Error_Handler();
+  }
+  // if (!can_driver.match_all_ids()) {
+  //   Error_Handler();
+  // }
+  can_driver.test_driver();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -99,7 +117,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    finished();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
