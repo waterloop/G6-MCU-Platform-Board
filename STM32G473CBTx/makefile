@@ -117,7 +117,8 @@ C_INCLUDES =  \
 -I ./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
 -I ./Drivers/CMSIS/Device/ST/STM32G4xx/Include \
 -I ./Drivers/CMSIS/Include \
--I ../platform/inc
+-I ../platform/inc \
+-I ../G6-CAN-Messages
 
 C_INCLUDES += $(USER_INCLUDES)
 

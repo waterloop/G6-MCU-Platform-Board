@@ -44,7 +44,7 @@ CanMessageFilter::CanMessageFilter(uint32_t filter_type,
         filter_id2,
     } {}
 
-CanMessage::CanMessage(CanMessage::Id id,
+CanMessage::CanMessage(CanMessageId id,
                             uint8_t *data,
                             uint32_t data_length)
     : identifier(id),
@@ -53,7 +53,7 @@ CanMessage::CanMessage(CanMessage::Id id,
       data_length(data_length) {}
 
 void CanMessage::set_id(uint32_t id) {
-    using Id = CanMessage::Id;
+    using Id = CanMessageId;
     switch (id) {
     case 0x00:
         identifier = Id::RelayFaultDetected;
@@ -88,7 +88,7 @@ void CanMessage::set_ESI(uint32_t esi) {
 
 RxCanMessage::RxCanMessage(uint8_t *data,
                             uint32_t dataLength)
-                            : CanMessage(Id::DefaultRx, data, dataLength) {}
+                            : CanMessage(CanMessageId::DefaultRx, data, dataLength) {}
 
 
 void CanDriver::initialize(OperatingMode initial_operating_mode) {
@@ -133,7 +133,7 @@ void CanDriver::test_driver() {
         data[i] = i;
         rx_data[i] = 0;
     }
-    CanMessage msg(CanMessage::Id::RelayFaultDetected, data, 8);
+    CanMessage msg(CanMessageId::RelayFaultDetected, data, 8);
     uint32_t id = write(msg);
     await_write(id);
     while (!rx_ready(CanRxFifo::FIFO0));
@@ -149,7 +149,7 @@ void CanDriver::test_driver() {
     for (int i = 0; i < 8; i++) {
         rx_data[i] = 0;
     }
-    msg = CanMessage(CanMessage::Id::LVSensingFaultDetected, data, 8);
+    msg = CanMessage(CanMessageId::LVSensingFaultDetected, data, 8);
     id = write(msg);
     await_write(id);
     while (!rx_ready(CanRxFifo::FIFO0));

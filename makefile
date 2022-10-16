@@ -1,6 +1,7 @@
 THIS_DIR := $(shell readlink -f .)
 BUILD_DIR = $(THIS_DIR)/build
 
+
 all:
 	cd $(DEV) && make BUILD_DIR=$(BUILD_DIR)
 

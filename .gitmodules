@@ -1,0 +1,3 @@
+[submodule "G6-CAN-Messages"]
+	path = G6-CAN-Messages
+	url = ../G6-CAN-Messages

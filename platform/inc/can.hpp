@@ -2,6 +2,7 @@
 #include "fdcan.h"
 #include "stdint.h"
 #include <type_traits>
+#include "can_messages.h"
 
 enum class CanFilterConfiguration : uint32_t {
     Disable = FDCAN_FILTER_DISABLE,
@@ -92,17 +93,6 @@ struct CanMessage {
     static constexpr size_t MAX_DATA_LENGTH = 64;
     static constexpr uint32_t MAX_UINT32 = 0xffffffff;
 
-    enum Id : uint32_t {
-        RelayFaultDetected      = 0x00,
-        BmsFaultDetected        = 0x01,
-        McFaultDetected         = 0x02,
-        LVSensingFaultDetected  = 0x03,
-
-
-        // TODO Fill out with the rest of the values
-        DefaultRx = MAX_UINT32,
-    };
-
     enum class ESI : uint32_t {
         ERROR_ACTIVE  = FDCAN_ESI_ACTIVE,
         ERROR_PASSIVE = FDCAN_ESI_PASSIVE,
@@ -110,12 +100,12 @@ struct CanMessage {
         UNKNOWN_ERROR_STATE = MAX_UINT32,
     };
 
-    CanMessage(Id id, uint8_t *data, uint32_t data_length=MAX_DATA_LENGTH);
+    CanMessage(CanMessageId id, uint8_t *data, uint32_t data_length=MAX_DATA_LENGTH);
 
     void set_id(uint32_t id);
     void set_ESI(uint32_t esi);
 
-    Id identifier;
+    CanMessageId identifier;
     ESI error_state_indicator = ESI::ERROR_PASSIVE;
     uint8_t message_marker;
     uint8_t* data;

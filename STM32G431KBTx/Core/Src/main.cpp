@@ -96,12 +96,12 @@ int main(void)
   can_driver.initialize();
   if (!can_driver.push_filters(
     CanMessageFilter::DualFilter(
-      CanMessage::Id::RelayFaultDetected,
-      CanMessage::Id::RelayFaultDetected
+      CanMessageId::RelayFaultDetected,
+      CanMessageId::RelayFaultDetected
     ),
     CanMessageFilter::DualFilter(
-      CanMessage::Id::LVSensingFaultDetected,
-      CanMessage::Id::LVSensingFaultDetected
+      CanMessageId::LVSensingFaultDetected,
+      CanMessageId::LVSensingFaultDetected
     )
   )) {
     Error_Handler();
