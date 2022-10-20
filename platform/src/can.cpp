@@ -72,7 +72,7 @@ void CanMessage::set_id(uint32_t id) {
     }
 }
 
-void CanMessage::set_id(CanMessageid id) { identifier = id; }
+void CanMessage::set_id(CanMessageId id) { identifier = id; }
 
 void CanMessage::set_ESI(uint32_t esi) {
     using ESI = CanMessage::ESI;

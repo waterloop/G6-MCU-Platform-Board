@@ -101,7 +101,7 @@ struct CanMessage {
     CanMessage(CanMessageId id, uint8_t *data, uint32_t data_length=CAN_MAX_DATA_LENGTH);
 
     void set_id(uint32_t id);
-    void set_id(CanMessageid id);
+    void set_id(CanMessageId id);
     void set_ESI(uint32_t esi);
 
     CanMessageId identifier;
