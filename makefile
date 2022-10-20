@@ -1,5 +1,5 @@
 THIS_DIR := $(shell readlink -f .)
-BUILD_DIR = $(THIS_DIR)/build
+BUILD_DIR = $(THIS_DIR)/build/$(DEV)
 
 
 all:
