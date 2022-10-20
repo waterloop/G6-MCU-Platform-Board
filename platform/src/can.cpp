@@ -72,6 +72,8 @@ void CanMessage::set_id(uint32_t id) {
     }
 }
 
+void CanMessage::set_id(CanMessageid id) { identifier = id; }
+
 void CanMessage::set_ESI(uint32_t esi) {
     using ESI = CanMessage::ESI;
     switch (esi) {
@@ -204,11 +206,7 @@ bool CanDriver::set_operating_mode(OperatingMode new_operating_mode) {
 }
 
 uint32_t CanDriver::write(CanMessage &msg) {
-    static uint8_t extra_buffer[64] = {
-        0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
-        0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0};
+    static uint8_t extra_buffer[64] = {0};
 
     auto dlc = get_data_length_code_from_byte_length(msg.data_length);
     FDCAN_TxHeaderTypeDef header = {
