@@ -133,7 +133,7 @@ endif
 
 
 # Generate dependency information
-# CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
+CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 
 
 #######################################

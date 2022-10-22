@@ -4,7 +4,7 @@ import re
 
 def get_devices():
     pattern = "./STM32[A-Z0-9]*x$"
-    sub_directories = [x[0] for x in os.walk(".") if re.match(pattern, x[0])]
+    sub_directories = [x[0].split('/')[1] for x in os.walk(".") if re.match(pattern, x[0])]
     return sub_directories
 
 def build_device(device):
