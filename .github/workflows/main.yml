@@ -1,6 +1,6 @@
 name: Firmware Build
 run-name: ${{ github.actor }} is building your firmware 🚀
-on: [push]
+on: [push, workflow_dispatch]
 jobs:
   build-firmware:
     runs-on: ubuntu-latest
