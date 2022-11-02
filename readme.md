@@ -7,6 +7,8 @@ Code repository for the Goose VI general platform board for the electrical archi
 ```bash
 git clone https://github.com/waterloop/G6-MCU-Platform-Board.git
 cd G6-MCU-Platform-Board
+
+git submodule update --init --recursive
 ```
 
 ## Building
