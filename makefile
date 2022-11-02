@@ -4,8 +4,11 @@ BUILD_DIR = $(GENERAL_BUILD_DIR)/$(DEV)
 
 
 
-all:
+all: $(GENERAL_BUILD_DIR)
 	cd $(DEV) && make BUILD_DIR=$(BUILD_DIR)
+
+$(GENERAL_BUILD_DIR):
+	mkdir $(GENERAL_BUILD_DIR)
 
 .PHONY: clean
 clean:
