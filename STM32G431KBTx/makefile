@@ -156,7 +156,8 @@ vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 OBJECTS += $(addprefix $(OBJECTS_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-PLATFORM_OBJECTS = $(addprefix $(OBJECTS_DIR)/,$(notdir $(PLATFORM_SOURCES:.c=.o)))
+PLATFORM_OBJECTS = $(addprefix $(OBJECTS_DIR)/,$(notdir $(PLATFORM_C_SOURCES:.c=.o)))
+PLATFORM_OBJECTS += $(addprefix $(OBJECTS_DIR)/,$(notdir $(PLATFORM_CPP_SOURCES:.cpp=.o)))
 
 $(OBJECTS_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(OBJECTS_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
