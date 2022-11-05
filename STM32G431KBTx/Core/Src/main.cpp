@@ -23,45 +23,22 @@
 #include "usart.h"
 #include "gpio.h"
 #include "platform.hpp"
+#include "thread.hpp"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+class ExampleThread : public Thread {
+public:
+  using Thread::Thread;
+  void Task() override {
+    while(1);
+  }
+};
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-
-
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-void finished() {
-  while(1) {}
-}
-/* USER CODE END 0 */
+class ExampleApp : public Platform {
+  void add_threads() override {
+    static ExampleThread thread1(ThreadPriority::Normal);
+    add_thread(&thread1);
+  }
+};
 
 /**
   * @brief  The application entry point.
@@ -69,54 +46,8 @@ void finished() {
   */
 __weak int main(void)
 {
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
-
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_USART2_UART_Init();
-  MX_TIM2_Init();
-
-  /* Initialize the RTOS */
-  osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
-  MX_FREERTOS_Init();
-
-  osKernelStart();
-
-
-  CanDriver can_driver = CanDriver::get_driver();
-  can_driver.initialize();
-  if (!can_driver.push_filters(
-    CanMessageFilter::DualFilter(
-      CanMessageId::RelayFaultDetected,
-      CanMessageId::RelayFaultDetected
-    ),
-    CanMessageFilter::DualFilter(
-      CanMessageId::LVSensingFaultDetected,
-      CanMessageId::LVSensingFaultDetected
-    )
-  )) {
-    Error_Handler();
-  }
-  // if (!can_driver.match_all_ids()) {
-  //   Error_Handler();
-  // }
-  can_driver.test_driver();
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
-    finished();
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+  ExampleApp app;
+  app.run();
 }
 
 /**

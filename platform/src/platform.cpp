@@ -1,25 +1,25 @@
 #include "platform.hpp"
+#include "thread.hpp"
 
-
-__WEAK void register_threads() {
-
-}
-
-int main() {
+void Platform::initialize_platform() {
     /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     HAL_Init();
 
     SystemClock_Config();
 
     osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
-    MX_FREERTOS_Init();
 
     CanDriver can_driver = CanDriver::get_driver();
     can_driver.initialize();
+}
 
-    register_threads();
-
+void Platform::run() {
+    initialize_platform();
+    add_threads();
     osKernelStart();
+    while(1);
+}
 
-    while(1); // ONLY HIT HERE IF ERROR
+void Platform::add_thread(Thread *thread) {
+    osThreadNew(threadFunc, thread, nullptr);
 }

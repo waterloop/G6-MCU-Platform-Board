@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file platform.hpp
  * @author Waterloop
@@ -8,14 +9,12 @@
  * @copyright Copyright (c) 2022
  *
  */
-#ifndef   __WEAK
-  #define __WEAK                                 __attribute__((weak))
-#endif
 #include "can.hpp"
 #include "cmsis_os.h"
 
+class Thread;
+
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 
 /**
  * @brief This is where the developer can register the threads
@@ -24,3 +23,24 @@ void MX_FREERTOS_Init(void);
  *
  */
 void register_threads();
+
+class Platform {
+  void initialize_platform();
+  Platform(Platform&) = delete;
+  Platform(Platform&&) = delete;
+
+public:
+  Platform() = default;
+  [[noreturn]] void run();
+
+protected:
+  /**
+   * @brief add_threads
+   * When implementing this function, declare static threads
+   * in the function body, and then pass them into the add_thread
+   * method
+   */
+  virtual void add_threads() = 0;
+
+  void add_thread(Thread *thread);
+};

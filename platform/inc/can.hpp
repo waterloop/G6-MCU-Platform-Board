@@ -3,6 +3,7 @@
 #include "stdint.h"
 #include <type_traits>
 #include "can_messages.h"
+#include "utils.hpp"
 
 enum class CanFilterConfiguration : uint32_t {
     Disable = FDCAN_FILTER_DISABLE,
@@ -26,11 +27,6 @@ constexpr uint32_t MAX_FILTER_ID = 0x7FF;
 constexpr uint32_t MAX_NUM_FILTERS = 28;
  constexpr size_t CAN_MAX_DATA_LENGTH = 64;
 
-template<typename T, typename... Args>
-static constexpr inline bool is_type() {
-    return (std::is_same<T, Args>::value && ...);
-}
-
 class CanDriver;
 
 class CanMessageFilter {
@@ -38,7 +34,10 @@ class CanMessageFilter {
     FDCAN_FilterTypeDef filter;
 
     CanMessageFilter();
-    CanMessageFilter(uint32_t filter_type, uint32_t filter_config, uint32_t filter_id1, uint32_t filter_id2);
+    CanMessageFilter(uint32_t filter_type,
+                     uint32_t filter_config,
+                     uint32_t filter_id1,
+                     uint32_t filter_id2);
 public:
     /**
      * @brief Create a Range Filter
@@ -49,9 +48,12 @@ public:
      * @param id_range_end
      * @return CanMessageFilter
      */
-    static CanMessageFilter RangeFilter(uint32_t id_range_start, uint32_t id_range_end) {
+    static CanMessageFilter RangeFilter(uint32_t id_range_start,
+                                        uint32_t id_range_end,
+                                        CanFilterConfiguration config
+                                            = DEFAULT_FILTER_CONFIG) {
         return CanMessageFilter(FDCAN_FILTER_RANGE,
-                                (uint32_t)DEFAULT_FILTER_CONFIG,
+                                (uint32_t)config,
                                 id_range_start,
                                 id_range_end);
     }
@@ -64,9 +66,12 @@ public:
      * @param id_2
      * @return CanMessageFilter
      */
-    static CanMessageFilter DualFilter(uint32_t id_1, uint32_t id_2) {
+    static CanMessageFilter DualFilter(uint32_t id_1,
+                                       uint32_t id_2,
+                                       CanFilterConfiguration config
+                                            = DEFAULT_FILTER_CONFIG) {
         return CanMessageFilter(FDCAN_FILTER_RANGE,
-                                (uint32_t)DEFAULT_FILTER_CONFIG,
+                                (uint32_t)config,
                                 id_1,
                                 id_2);
     }
@@ -197,6 +202,14 @@ struct CanDriver {
     [[nodiscard]] bool read(RxCanMessage &msg, CanRxFifo rxFifo = DEFAULT_RX_FIFO);
 
 
+    /**
+     * @brief Add Filters for Can Messages
+     *
+     * @tparam Filter
+     * @param filter
+     * @return true
+     * @return false
+     */
     template<typename... Filter>
     [[nodiscard]] bool push_filters(Filter... filter) {
         static_assert(is_type<CanMessageFilter, Filter...>(),
@@ -211,6 +224,12 @@ struct CanDriver {
         return result;
     }
 
+    /**
+     * @brief Disable Filters and capture every message on the BUS
+     *
+     * @return true
+     * @return false
+     */
     [[nodiscard]] bool match_all_ids();
 
 protected:
