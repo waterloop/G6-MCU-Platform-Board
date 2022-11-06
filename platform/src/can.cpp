@@ -122,8 +122,19 @@ void CanDriver::initialize(OperatingMode initial_operating_mode) {
             Error_Handler();
         }
 
-        HAL_FDCAN_RegisterRxFifo0Callback(&can_handle, app_can_callback);
-        HAL_FDCAN_RegisterRxFifo1Callback(&can_handle, platform_can_callback);
+        // Initialize Semaphores for interacting with the IRQs
+        driver_locks.rx_fifo0 = osSemaphoreNew(3, 0, nullptr);
+        driver_locks.rx_fifo1 = osSemaphoreNew(3, 0, nullptr);
+        if (driver_locks.rx_fifo0 == nullptr || driver_locks.rx_fifo1 == nullptr) {
+            Error_Handler();
+        }
+
+        if (HAL_FDCAN_RegisterRxFifo0Callback(&can_handle, app_can_callback) != HAL_OK) {
+            Error_Handler();
+        }
+        if(HAL_FDCAN_RegisterRxFifo1Callback(&can_handle, platform_can_callback) != HAL_OK) {
+            Error_Handler();
+        }
     }
     __enable_irq();
 }
@@ -146,7 +157,6 @@ void CanDriver::test_driver() {
     CanMessage msg(CanMessageId::RelayFaultDetectedId, data, 8);
     uint32_t id = write(msg);
     await_write(id);
-    while (!read_ready(CanRxFifo::FIFO0));
     RxCanMessage rxmsg(rx_data, 64);
     if (!read(rxmsg)) { Error_Handler(); }
     for (int i = 0; i < 8; i++) {
@@ -162,7 +172,6 @@ void CanDriver::test_driver() {
     msg = CanMessage(CanMessageId::LVSensingFaultDetectedId, data, 8);
     id = write(msg);
     await_write(id);
-    while (!read_ready(CanRxFifo::FIFO0));
     rxmsg = RxCanMessage(rx_data, 64);
     if (!read(rxmsg)) { Error_Handler(); }
     for (int i = 0; i < 8; i++) {

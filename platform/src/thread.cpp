@@ -6,3 +6,7 @@ Thread::Thread(ThreadPriority priority)
 void threadFunc(void *thread) {
     ((Thread*)thread)->Task();
 }
+
+void Thread::yield() {
+    osThreadYield();
+}

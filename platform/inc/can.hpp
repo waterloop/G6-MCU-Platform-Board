@@ -6,8 +6,6 @@
 #include "utils.hpp"
 #include "cmsis_os2.h"
 
-#define USE_HAL_FDCAN_REGISTER_CALLBACKS 1
-
 void platform_can_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs);
 void app_can_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs);
 
