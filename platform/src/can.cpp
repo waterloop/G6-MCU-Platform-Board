@@ -1,7 +1,12 @@
 #include "can.hpp"
 #include "string.h"
 
+#define CHECK_MASK(bitset, mask) (((bitset) & (mask)) == (mask))
+
 static uint8_t messageMarkerGenerator = 0;
+
+static CanDriverLocks can_driver_locks;
+
 static constexpr uint8_t dlc_to_data_length[16] = {
     0,
     1,
@@ -116,6 +121,9 @@ void CanDriver::initialize(OperatingMode initial_operating_mode) {
         if (!set_operating_mode(initial_operating_mode)) {
             Error_Handler();
         }
+
+        HAL_FDCAN_RegisterRxFifo0Callback(&can_handle, app_can_callback);
+        HAL_FDCAN_RegisterRxFifo1Callback(&can_handle, platform_can_callback);
     }
     __enable_irq();
 }
@@ -243,12 +251,13 @@ void CanDriver::await_write(uint32_t &txId) {
     while (HAL_FDCAN_IsTxBufferMessagePending(&can_handle, txId));
 }
 
-bool CanDriver::read_ready(CanRxFifo rxFifo ) {
-    return HAL_FDCAN_GetRxFifoFillLevel(&can_handle, (uint32_t)rxFifo) > 0;
-}
-
-bool CanDriver::read(RxCanMessage &msg, CanRxFifo rxFifo ) {
-    if (!read_ready(rxFifo)) { return false; }
+bool CanDriver::read(RxCanMessage &msg, CanRxFifo rxFifo, uint32_t timeout ) {
+    switch (rxFifo) {
+    case CanRxFifo::APP_FIFO0:
+        osSemaphoreAcquire(driver_locks.rx_fifo0, timeout);
+    case CanRxFifo::PLATFORM_FIFO1:
+        osSemaphoreAcquire(driver_locks.rx_fifo1, timeout);
+    }
     FDCAN_RxHeaderTypeDef rxHeader;
     if (HAL_FDCAN_GetRxMessage(&can_handle,
                                (uint32_t)rxFifo,
@@ -271,6 +280,16 @@ bool CanDriver::match_all_ids() {
     FDCAN_REJECT_REMOTE,
     FDCAN_REJECT_REMOTE);
     return HAL_FDCAN_Start(&can_handle) == HAL_OK;
+}
+
+bool CanDriver::enable_interrupts() {
+    uint32_t interrupts = 0;
+    interrupts |= FDCAN_IT_RX_FIFO0_MESSAGE_LOST;
+    interrupts |= FDCAN_IT_RX_FIFO1_MESSAGE_LOST;
+    interrupts |= FDCAN_IT_RX_FIFO0_NEW_MESSAGE;
+    interrupts |= FDCAN_IT_RX_FIFO1_NEW_MESSAGE;
+    auto status = HAL_FDCAN_ActivateNotification(&can_handle, interrupts, 0);
+    return status == HAL_OK;
 }
 
 bool CanDriver::push_filter(CanMessageFilter &filter) {
@@ -312,5 +331,26 @@ uint32_t CanDriver::get_data_length_code_from_byte_length(uint32_t byte_length) 
 
 CanDriver::CanDriver()
     : can_handle(hfdcan1),
+    driver_locks(can_driver_locks),
     operating_mode(OperatingMode::InternalLoopback),
     num_filters(0) {}
+
+
+void platform_can_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+    if (CHECK_MASK(RxFifo1ITs, FDCAN_IT_RX_FIFO1_MESSAGE_LOST)) {
+        Error_Handler();
+    }
+    if (CHECK_MASK(RxFifo1ITs, FDCAN_IT_RX_FIFO1_NEW_MESSAGE) && can_driver_locks.rx_fifo1) {
+        osSemaphoreRelease(can_driver_locks.rx_fifo1);
+    }
+}
+
+
+void app_can_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
+    if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_MESSAGE_LOST)) {
+        Error_Handler();
+    }
+    if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_NEW_MESSAGE) && can_driver_locks.rx_fifo0) {
+        osSemaphoreRelease(can_driver_locks.rx_fifo0);
+    }
+}
