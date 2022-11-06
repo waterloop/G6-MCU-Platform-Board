@@ -5,4 +5,4 @@
 
 class HeartBeatTask : public Thread {
     void Task() override;
-}
+};
