@@ -6,9 +6,6 @@
 #include "utils.hpp"
 #include "cmsis_os2.h"
 
-void platform_can_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs);
-void app_can_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs);
-
 enum class CanFilterConfiguration : uint32_t {
     Disable = FDCAN_FILTER_DISABLE,
     APP_RxFIFO0 = FDCAN_FILTER_TO_RXFIFO0,
@@ -145,7 +142,7 @@ struct CanDriver {
     /**
      * @brief Initalized the Can Driver
      * This function should only be called once in the setup of the
-     * application.
+     * application. Assumes the RTOS to be initialized
      *
      */
     void initialize(OperatingMode initial_operating_mode=OperatingMode::InternalLoopback);

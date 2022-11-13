@@ -27,10 +27,27 @@
 
 class ExampleThread : public Thread {
 public:
-  using Thread::Thread;
-  void Task() override {
-    while(1);
-  }
+    using Thread::Thread;
+    void Task() override {
+        CanDriver can_driver = CanDriver::get_driver();
+        if (!can_driver.enable_interrupts()) {
+            Error_Handler();
+        }
+        if (!can_driver.push_filters(
+            CanMessageFilter::DualFilter(
+            CanMessageId::RelayFaultDetectedId,
+            CanMessageId::RelayFaultDetectedId
+            ),
+            CanMessageFilter::DualFilter(
+            CanMessageId::LVSensingFaultDetectedId,
+            CanMessageId::LVSensingFaultDetectedId
+            )
+        )) {
+            Error_Handler();
+        }
+        can_driver.test_driver();
+        while(1);
+    }
 };
 
 class ExampleApp : public Platform {

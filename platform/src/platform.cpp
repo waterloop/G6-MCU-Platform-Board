@@ -11,6 +11,7 @@ void Platform::initialize_platform() {
 
     CanDriver can_driver = CanDriver::get_driver();
     can_driver.initialize();
+
 }
 
 void Platform::run() {

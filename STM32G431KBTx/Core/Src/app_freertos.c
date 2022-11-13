@@ -54,6 +54,16 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 4
 };
+/* Definitions for fdcan_rxfifo0 */
+osSemaphoreId_t fdcan_rxfifo0Handle;
+const osSemaphoreAttr_t fdcan_rxfifo0_attributes = {
+  .name = "fdcan_rxfifo0"
+};
+/* Definitions for fdcan_rxfifo1 */
+osSemaphoreId_t fdcan_rxfifo1Handle;
+const osSemaphoreAttr_t fdcan_rxfifo1_attributes = {
+  .name = "fdcan_rxfifo1"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -77,6 +87,13 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of fdcan_rxfifo0 */
+  fdcan_rxfifo0Handle = osSemaphoreNew(3, 3, &fdcan_rxfifo0_attributes);
+
+  /* creation of fdcan_rxfifo1 */
+  fdcan_rxfifo1Handle = osSemaphoreNew(3, 3, &fdcan_rxfifo1_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
