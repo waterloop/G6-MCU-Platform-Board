@@ -259,10 +259,14 @@ void CanDriver::await_write(uint32_t &txId) {
 bool CanDriver::read(RxCanMessage &msg, CanRxFifo rxFifo, uint32_t timeout ) {
     switch (rxFifo) {
     case CanRxFifo::APP_FIFO0:
-        osSemaphoreAcquire(driver_locks.rx_fifo0, timeout);
+        if (!driver_locks.rx_fifo0.acquire(timeout)) {
+            Error_Handler();
+        }
         break;
     case CanRxFifo::PLATFORM_FIFO1:
-        osSemaphoreAcquire(driver_locks.rx_fifo1, timeout);
+        if (driver_locks.rx_fifo1.acquire(timeout)) {
+            Error_Handler();
+        }
         break;
     }
     FDCAN_RxHeaderTypeDef rxHeader;
@@ -290,25 +294,9 @@ bool CanDriver::match_all_ids() {
 }
 
 bool CanDriver::enable_interrupts() {
-    // Initialize Semaphores for interacting with the IRQs
-    osSemaphoreAttr_t rx_fifo0_semaphore_attrs = {
-        .name = "fdcan_rx0",
-        .cb_mem = NULL,
-        .cb_size = 0
-    };
-    osSemaphoreAttr_t rx_fifo1_semaphore_attrs = {
-        .name = "fdcan_rx1",
-        .cb_mem = NULL,
-        .cb_size = 0
-    };
-
-    if (&can_driver_locks != &driver_locks) {
-        return false;
-    }
-
-    driver_locks.rx_fifo0 = osSemaphoreNew(3, 0, &rx_fifo0_semaphore_attrs);
-    driver_locks.rx_fifo1 = osSemaphoreNew(3, 0, &rx_fifo1_semaphore_attrs);
-    if (driver_locks.rx_fifo0 == NULL || driver_locks.rx_fifo1 == NULL) {
+    driver_locks.rx_fifo0 = Semaphore::New(3, 0);
+    driver_locks.rx_fifo1 = Semaphore::New(3, 0);
+    if (!driver_locks.rx_fifo0.isInitialized() || !driver_locks.rx_fifo1.isInitialized()) {
         return false;
     }
 
@@ -366,23 +354,38 @@ CanDriver::CanDriver()
 
 
 void FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+#ifdef DEBUG
+#if DEBUG > 0
+    if (!can_driver_locks.rx_fifo1.isInitialized()) {
+        Error_Handler();
+    }
+#endif
+#endif
     if (CHECK_MASK(RxFifo1ITs, FDCAN_IT_RX_FIFO1_MESSAGE_LOST)) {
         Error_Handler();
     }
-    if (CHECK_MASK(RxFifo1ITs, FDCAN_IT_RX_FIFO1_NEW_MESSAGE) && can_driver_locks.rx_fifo1) {
-        if(osSemaphoreRelease(can_driver_locks.rx_fifo1) != osOK) {
+    if (CHECK_MASK(RxFifo1ITs, FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
+        if(!can_driver_locks.rx_fifo1.release()) {
             Error_Handler();
         }
     }
 }
 
 void FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
+#ifdef DEBUG
+#if DEBUG > 0
+    if (!can_driver_locks.rx_fifo0.isInitialized()) {
+        Error_Handler();
+    }
+#endif
+#endif
+
+    #endif
     if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_MESSAGE_LOST)) {
         Error_Handler();
     }
-    if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_NEW_MESSAGE) && can_driver_locks.rx_fifo0) {
-        auto status = osSemaphoreRelease(can_driver_locks.rx_fifo0);
-        if (status != osOK) {
+    if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_NEW_MESSAGE)) {
+        if (!can_driver_locks.rx_fifo0.release()) {
             Error_Handler();
         }
     }
