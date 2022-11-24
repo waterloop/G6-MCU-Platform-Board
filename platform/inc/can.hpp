@@ -5,6 +5,7 @@
 #include "can_messages.h"
 #include "utils.hpp"
 #include "rtos/semaphore.hpp"
+#include "rtos/mutex.hpp"
 
 enum class CanFilterConfiguration : uint32_t {
     Disable = FDCAN_FILTER_DISABLE,
@@ -126,6 +127,7 @@ struct RxCanMessage : public CanMessage {
 struct CanDriverLocks {
     Semaphore rx_fifo0;
     Semaphore rx_fifo1;
+    Mutex tx_lock;
 };
 
 struct CanDriver {

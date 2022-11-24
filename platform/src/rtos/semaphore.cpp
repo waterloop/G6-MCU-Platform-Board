@@ -14,6 +14,7 @@ Semaphore::Semaphore(Semaphore&& other)
 Semaphore& Semaphore::operator=(Semaphore&& other) {
     handle = other.handle;
     other.handle = nullptr;
+    return *this;
 }
 
 Semaphore Semaphore::New(uint32_t max_count, uint32_t initial_count) {

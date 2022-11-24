@@ -234,22 +234,27 @@ uint32_t CanDriver::write(CanMessage &msg) {
         .MessageMarker = msg.message_marker
     };
 
-    /**
-     * @brief Since we cannot cover the full range of values from
-     * 0 to 64 in the dlc, we have to round the length of the message
-     * up to the next nearest size. To prevent reading past the end of
-     * the buffer when we do this round up, we first copy the message into
-     * a buffer which the HAL can safely read to the full length of the DLC.
-     *
-     */
-    if (msg.data_length != dlc_to_data_length[dlc >> 16]) {
-        memcpy(extra_buffer, msg.data, msg.data_length);
-        HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, extra_buffer);
-    }
-    else {
-        HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, msg.data);
-    }
-    return HAL_FDCAN_GetLatestTxFifoQRequestBuffer(&can_handle);
+    uint32_t returnValue;
+    if (!driver_locks.tx_lock.criticalSection([&]() {
+        /**
+         * @brief Since we cannot cover the full range of values from
+         * 0 to 64 in the dlc, we have to round the length of the message
+         * up to the next nearest size. To prevent reading past the end of
+         * the buffer when we do this round up, we first copy the message into
+         * a buffer which the HAL can safely read to the full length of the DLC.
+         *
+         */
+        if (msg.data_length != dlc_to_data_length[dlc >> 16]) {
+            memcpy(extra_buffer, msg.data, msg.data_length);
+            HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, extra_buffer);
+        }
+        else {
+            HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, msg.data);
+        }
+        returnValue = HAL_FDCAN_GetLatestTxFifoQRequestBuffer(&can_handle);
+    })) { Error_Handler(); };
+
+    return returnValue;
 }
 
 void CanDriver::await_write(uint32_t &txId) {
@@ -296,6 +301,7 @@ bool CanDriver::match_all_ids() {
 bool CanDriver::enable_interrupts() {
     driver_locks.rx_fifo0 = Semaphore::New(3, 0);
     driver_locks.rx_fifo1 = Semaphore::New(3, 0);
+    driver_locks.tx_lock  = Mutex::New();
     if (!driver_locks.rx_fifo0.isInitialized() || !driver_locks.rx_fifo1.isInitialized()) {
         return false;
     }
@@ -380,7 +386,6 @@ void FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
 #endif
 #endif
 
-    #endif
     if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_MESSAGE_LOST)) {
         Error_Handler();
     }

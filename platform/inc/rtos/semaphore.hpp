@@ -1,7 +1,6 @@
 #pragma once
+#include "main.h"
 #include "cmsis_os2.h"
-
-void Error_Handler(void);
 
 class Semaphore {
     osSemaphoreId_t handle = nullptr;

@@ -21,7 +21,6 @@
 #include "can.hpp"
 #include "tim.h"
 #include "usart.h"
-#include "gpio.h"
 #include "platform.hpp"
 #include "thread.hpp"
 
