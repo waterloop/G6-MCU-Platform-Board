@@ -47,7 +47,7 @@
 /*#define HAL_HRTIM_MODULE_ENABLED   */
 /*#define HAL_IRDA_MODULE_ENABLED   */
 /*#define HAL_IWDG_MODULE_ENABLED   */
-/*#define HAL_I2C_MODULE_ENABLED   */
+#define HAL_I2C_MODULE_ENABLED
 /*#define HAL_I2S_MODULE_ENABLED   */
 /*#define HAL_LPTIM_MODULE_ENABLED   */
 /*#define HAL_NAND_MODULE_ENABLED   */
@@ -84,7 +84,7 @@
 #define USE_HAL_CRYP_REGISTER_CALLBACKS       0U
 #define USE_HAL_DAC_REGISTER_CALLBACKS        0U
 #define USE_HAL_EXTI_REGISTER_CALLBACKS       0U
-#define USE_HAL_FDCAN_REGISTER_CALLBACKS      0U
+#define USE_HAL_FDCAN_REGISTER_CALLBACKS      1U
 #define USE_HAL_FMAC_REGISTER_CALLBACKS       0U
 #define USE_HAL_HRTIM_REGISTER_CALLBACKS      0U
 #define USE_HAL_I2C_REGISTER_CALLBACKS        0U
@@ -181,7 +181,7 @@ The real value may vary depending on the variations in voltage and temperature.*
   */
 
 #define  VDD_VALUE                   (3300UL) /*!< Value of VDD in mv */
-#define  TICK_INT_PRIORITY           (0UL)    /*!< tick interrupt priority (lowest by default)  */
+#define  TICK_INT_PRIORITY           (15UL)    /*!< tick interrupt priority (lowest by default)  */
 #define  USE_RTOS                     0U
 #define  PREFETCH_ENABLE              0U
 #define  INSTRUCTION_CACHE_ENABLE     1U

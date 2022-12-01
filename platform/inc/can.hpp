@@ -3,11 +3,14 @@
 #include "stdint.h"
 #include <type_traits>
 #include "can_messages.h"
+#include "utils.hpp"
+#include "rtos/semaphore.hpp"
+#include "rtos/mutex.hpp"
 
 enum class CanFilterConfiguration : uint32_t {
     Disable = FDCAN_FILTER_DISABLE,
-    RxFIFO0 = FDCAN_FILTER_TO_RXFIFO0,
-    RxFIFO1 = FDCAN_FILTER_TO_RXFIFO1,
+    APP_RxFIFO0 = FDCAN_FILTER_TO_RXFIFO0,
+    PLATFORM_RxFIFO1 = FDCAN_FILTER_TO_RXFIFO1,
     Reject = FDCAN_FILTER_REJECT,
     HighPriority = FDCAN_FILTER_HP,
     HighPriorityRxFIFO0 = FDCAN_FILTER_TO_RXFIFO0_HP,
@@ -15,21 +18,16 @@ enum class CanFilterConfiguration : uint32_t {
 };
 
 enum class CanRxFifo : uint32_t {
-    FIFO0 = FDCAN_RX_FIFO0,
-    FIFO1 = FDCAN_RX_FIFO1,
+    APP_FIFO0 = FDCAN_RX_FIFO0,
+    PLATFORM_FIFO1 = FDCAN_RX_FIFO1,
 };
 
-// We may want to parameterize this in the future, but for now just use rxfifo 0
-constexpr CanFilterConfiguration DEFAULT_FILTER_CONFIG = CanFilterConfiguration::RxFIFO0;
-constexpr CanRxFifo DEFAULT_RX_FIFO = CanRxFifo::FIFO0;
+// Set the APP fifo to be default for most calls. Use the FIFO1 for the platform can thread
+constexpr CanFilterConfiguration DEFAULT_FILTER_CONFIG = CanFilterConfiguration::APP_RxFIFO0;
+constexpr CanRxFifo DEFAULT_RX_FIFO = CanRxFifo::APP_FIFO0;
 constexpr uint32_t MAX_FILTER_ID = 0x7FF;
 constexpr uint32_t MAX_NUM_FILTERS = 28;
  constexpr size_t CAN_MAX_DATA_LENGTH = 64;
-
-template<typename T, typename... Args>
-static constexpr inline bool is_type() {
-    return (std::is_same<T, Args>::value && ...);
-}
 
 class CanDriver;
 
@@ -38,7 +36,10 @@ class CanMessageFilter {
     FDCAN_FilterTypeDef filter;
 
     CanMessageFilter();
-    CanMessageFilter(uint32_t filter_type, uint32_t filter_config, uint32_t filter_id1, uint32_t filter_id2);
+    CanMessageFilter(uint32_t filter_type,
+                     uint32_t filter_config,
+                     uint32_t filter_id1,
+                     uint32_t filter_id2);
 public:
     /**
      * @brief Create a Range Filter
@@ -49,9 +50,12 @@ public:
      * @param id_range_end
      * @return CanMessageFilter
      */
-    static CanMessageFilter RangeFilter(uint32_t id_range_start, uint32_t id_range_end) {
+    static CanMessageFilter RangeFilter(uint32_t id_range_start,
+                                        uint32_t id_range_end,
+                                        CanFilterConfiguration config
+                                            = DEFAULT_FILTER_CONFIG) {
         return CanMessageFilter(FDCAN_FILTER_RANGE,
-                                (uint32_t)DEFAULT_FILTER_CONFIG,
+                                (uint32_t)config,
                                 id_range_start,
                                 id_range_end);
     }
@@ -64,9 +68,12 @@ public:
      * @param id_2
      * @return CanMessageFilter
      */
-    static CanMessageFilter DualFilter(uint32_t id_1, uint32_t id_2) {
+    static CanMessageFilter DualFilter(uint32_t id_1,
+                                       uint32_t id_2,
+                                       CanFilterConfiguration config
+                                            = DEFAULT_FILTER_CONFIG) {
         return CanMessageFilter(FDCAN_FILTER_RANGE,
-                                (uint32_t)DEFAULT_FILTER_CONFIG,
+                                (uint32_t)config,
                                 id_1,
                                 id_2);
     }
@@ -117,6 +124,12 @@ struct RxCanMessage : public CanMessage {
 
 };
 
+struct CanDriverLocks {
+    Semaphore rx_fifo0;
+    Semaphore rx_fifo1;
+    Mutex tx_lock;
+};
+
 struct CanDriver {
 
     enum class OperatingMode : uint32_t {
@@ -131,7 +144,7 @@ struct CanDriver {
     /**
      * @brief Initalized the Can Driver
      * This function should only be called once in the setup of the
-     * application.
+     * application. Assumes the RTOS to be initialized
      *
      */
     void initialize(OperatingMode initial_operating_mode=OperatingMode::InternalLoopback);
@@ -192,11 +205,25 @@ struct CanDriver {
      */
     void await_write(uint32_t &txId);
 
-    [[nodiscard]] bool read_ready(CanRxFifo rxFifo = DEFAULT_RX_FIFO);
+    /**
+     * @brief Read message into msg from rxFifo
+     *
+     * @param msg
+     * @param rxFifo
+     * @return true
+     * @return false
+     */
+    [[nodiscard]] bool read(RxCanMessage &msg, CanRxFifo rxFifo = DEFAULT_RX_FIFO, uint32_t timeout = osWaitForever);
 
-    [[nodiscard]] bool read(RxCanMessage &msg, CanRxFifo rxFifo = DEFAULT_RX_FIFO);
 
-
+    /**
+     * @brief Add Filters for Can Messages
+     *
+     * @tparam Filter
+     * @param filter
+     * @return true
+     * @return false
+     */
     template<typename... Filter>
     [[nodiscard]] bool push_filters(Filter... filter) {
         static_assert(is_type<CanMessageFilter, Filter...>(),
@@ -211,7 +238,23 @@ struct CanDriver {
         return result;
     }
 
+    /**
+     * @brief Disable Filters and capture every message on the BUS
+     *
+     * @return true
+     * @return false
+     */
     [[nodiscard]] bool match_all_ids();
+
+    /**
+     * @brief Enable Interrupts generated by the CAN
+     * Peripheral. Also initializes synchronization mechanisms used by the
+     * interrupts. Must be called from an RTOS task.
+     *
+     * @return true
+     * @return false
+     */
+    [[nodiscard]]bool enable_interrupts();
 
 protected:
     CanDriver();
@@ -222,8 +265,9 @@ protected:
 
 private:
     FDCAN_HandleTypeDef &can_handle;
-    bool initialized;
+    CanDriverLocks &driver_locks;
+    bool initialized = false;
     OperatingMode operating_mode;
-    uint32_t num_filters;
+    uint32_t num_filters = 0;
     CanMessageFilter message_filters[MAX_NUM_FILTERS];
 };

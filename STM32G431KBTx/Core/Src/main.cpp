@@ -21,106 +21,49 @@
 #include "can.hpp"
 #include "tim.h"
 #include "usart.h"
-#include "gpio.h"
+#include "platform.hpp"
+#include "thread.hpp"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+class ExampleThread : public Thread {
+public:
+    using Thread::Thread;
+    void Task() override {
+        CanDriver can_driver = CanDriver::get_driver();
+        if (!can_driver.enable_interrupts()) {
+            Error_Handler();
+        }
+        if (!can_driver.push_filters(
+            CanMessageFilter::DualFilter(
+            CanMessageId::RelayFaultDetectedId,
+            CanMessageId::RelayFaultDetectedId
+            ),
+            CanMessageFilter::DualFilter(
+            CanMessageId::LVSensingFaultDetectedId,
+            CanMessageId::LVSensingFaultDetectedId
+            )
+        )) {
+            Error_Handler();
+        }
+        can_driver.test_driver();
+        while(1);
+    }
+};
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-void finished() {
-  while(1) {}
-}
-/* USER CODE END 0 */
+class ExampleApp : public Platform {
+  void add_threads() override {
+    static ExampleThread thread1(ThreadPriority::Normal);
+    add_thread(&thread1);
+  }
+};
 
 /**
   * @brief  The application entry point.
   * @retval int
   */
-int main(void)
+__weak int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_USART2_UART_Init();
-  MX_TIM2_Init();
-  /* USER CODE BEGIN 2 */
-  CanDriver can_driver = CanDriver::get_driver();
-  can_driver.initialize();
-  if (!can_driver.push_filters(
-    CanMessageFilter::DualFilter(
-      CanMessageId::RelayFaultDetected,
-      CanMessageId::RelayFaultDetected
-    ),
-    CanMessageFilter::DualFilter(
-      CanMessageId::LVSensingFaultDetected,
-      CanMessageId::LVSensingFaultDetected
-    )
-  )) {
-    Error_Handler();
-  }
-  // if (!can_driver.match_all_ids()) {
-  //   Error_Handler();
-  // }
-  can_driver.test_driver();
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
-    finished();
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+  ExampleApp app;
+  app.run();
 }
 
 /**

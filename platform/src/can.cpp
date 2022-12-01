@@ -1,7 +1,12 @@
 #include "can.hpp"
 #include "string.h"
 
+#define CHECK_MASK(bitset, mask) (((bitset) & (mask)) == (mask))
+
 static uint8_t messageMarkerGenerator = 0;
+
+static CanDriverLocks can_driver_locks;
+
 static constexpr uint8_t dlc_to_data_length[16] = {
     0,
     1,
@@ -56,16 +61,16 @@ void CanMessage::set_id(uint32_t id) {
     using Id = CanMessageId;
     switch (id) {
     case 0x00:
-        identifier = Id::RelayFaultDetected;
+        identifier = Id::RelayFaultDetectedId;
         break;
     case 0x01:
-        identifier = Id::BmsFaultDetected;
+        identifier = Id::BmsFaultDetectedId;
         break;
     case 0x02:
-        identifier = Id::McFaultDetected;
+        identifier = Id::McFaultDetectedId;
         break;
     case 0x03:
-        identifier = Id::LVSensingFaultDetected;
+        identifier = Id::LVSensingFaultDetectedId;
         break;
     default:
         identifier = Id::DefaultRx;
@@ -93,6 +98,9 @@ RxCanMessage::RxCanMessage(uint8_t *data,
                             : CanMessage(CanMessageId::DefaultRx, data, dataLength) {}
 
 
+void FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs);
+void FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs);
+
 void CanDriver::initialize(OperatingMode initial_operating_mode) {
     /**
      * CRITICAL SECTION: This initializer should only be called before
@@ -100,7 +108,6 @@ void CanDriver::initialize(OperatingMode initial_operating_mode) {
      * we have placed it in a critical section to prevent it from being
      * initialized twice.
     */
-    __disable_irq();
     if (!initialized) {
         if (&can_handle == &hfdcan1) {
             MX_FDCAN1_Init();
@@ -116,8 +123,18 @@ void CanDriver::initialize(OperatingMode initial_operating_mode) {
         if (!set_operating_mode(initial_operating_mode)) {
             Error_Handler();
         }
+
+        auto status = HAL_FDCAN_Stop(&can_handle);
+        if (status != HAL_OK) { Error_Handler(); }
+        if (HAL_FDCAN_RegisterRxFifo0Callback(&can_handle, &FDCAN_RxFifo0Callback) != HAL_OK) {
+            Error_Handler();
+        }
+        if (HAL_FDCAN_RegisterRxFifo1Callback(&can_handle, &FDCAN_RxFifo1Callback) != HAL_OK) {
+            Error_Handler();
+        }
+        status = HAL_FDCAN_Start(&can_handle);
+        if (status != HAL_OK) { Error_Handler(); }
     }
-    __enable_irq();
 }
 
 void CanDriver::test_driver() {
@@ -135,10 +152,8 @@ void CanDriver::test_driver() {
         data[i] = i;
         rx_data[i] = 0;
     }
-    CanMessage msg(CanMessageId::RelayFaultDetected, data, 8);
-    uint32_t id = write(msg);
-    await_write(id);
-    while (!read_ready(CanRxFifo::FIFO0));
+    CanMessage msg(CanMessageId::RelayFaultDetectedId, data, 8);
+    write(msg);
     RxCanMessage rxmsg(rx_data, 64);
     if (!read(rxmsg)) { Error_Handler(); }
     for (int i = 0; i < 8; i++) {
@@ -151,10 +166,8 @@ void CanDriver::test_driver() {
     for (int i = 0; i < 8; i++) {
         rx_data[i] = 0;
     }
-    msg = CanMessage(CanMessageId::LVSensingFaultDetected, data, 8);
-    id = write(msg);
-    await_write(id);
-    while (!read_ready(CanRxFifo::FIFO0));
+    msg = CanMessage(CanMessageId::LVSensingFaultDetectedId, data, 8);
+    write(msg);
     rxmsg = RxCanMessage(rx_data, 64);
     if (!read(rxmsg)) { Error_Handler(); }
     for (int i = 0; i < 8; i++) {
@@ -221,34 +234,46 @@ uint32_t CanDriver::write(CanMessage &msg) {
         .MessageMarker = msg.message_marker
     };
 
-    /**
-     * @brief Since we cannot cover the full range of values from
-     * 0 to 64 in the dlc, we have to round the length of the message
-     * up to the next nearest size. To prevent reading past the end of
-     * the buffer when we do this round up, we first copy the message into
-     * a buffer which the HAL can safely read to the full length of the DLC.
-     *
-     */
-    if (msg.data_length != dlc_to_data_length[dlc >> 16]) {
-        memcpy(extra_buffer, msg.data, msg.data_length);
-        HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, extra_buffer);
-    }
-    else {
-        HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, msg.data);
-    }
-    return HAL_FDCAN_GetLatestTxFifoQRequestBuffer(&can_handle);
+    uint32_t returnValue;
+    if (!driver_locks.tx_lock.criticalSection([&]() {
+        /**
+         * @brief Since we cannot cover the full range of values from
+         * 0 to 64 in the dlc, we have to round the length of the message
+         * up to the next nearest size. To prevent reading past the end of
+         * the buffer when we do this round up, we first copy the message into
+         * a buffer which the HAL can safely read to the full length of the DLC.
+         *
+         */
+        if (msg.data_length != dlc_to_data_length[dlc >> 16]) {
+            memcpy(extra_buffer, msg.data, msg.data_length);
+            HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, extra_buffer);
+        }
+        else {
+            HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, &header, msg.data);
+        }
+        returnValue = HAL_FDCAN_GetLatestTxFifoQRequestBuffer(&can_handle);
+    })) { Error_Handler(); };
+
+    return returnValue;
 }
 
 void CanDriver::await_write(uint32_t &txId) {
     while (HAL_FDCAN_IsTxBufferMessagePending(&can_handle, txId));
 }
 
-bool CanDriver::read_ready(CanRxFifo rxFifo ) {
-    return HAL_FDCAN_GetRxFifoFillLevel(&can_handle, (uint32_t)rxFifo) > 0;
-}
-
-bool CanDriver::read(RxCanMessage &msg, CanRxFifo rxFifo ) {
-    if (!read_ready(rxFifo)) { return false; }
+bool CanDriver::read(RxCanMessage &msg, CanRxFifo rxFifo, uint32_t timeout ) {
+    switch (rxFifo) {
+    case CanRxFifo::APP_FIFO0:
+        if (!driver_locks.rx_fifo0.acquire(timeout)) {
+            Error_Handler();
+        }
+        break;
+    case CanRxFifo::PLATFORM_FIFO1:
+        if (driver_locks.rx_fifo1.acquire(timeout)) {
+            Error_Handler();
+        }
+        break;
+    }
     FDCAN_RxHeaderTypeDef rxHeader;
     if (HAL_FDCAN_GetRxMessage(&can_handle,
                                (uint32_t)rxFifo,
@@ -271,6 +296,23 @@ bool CanDriver::match_all_ids() {
     FDCAN_REJECT_REMOTE,
     FDCAN_REJECT_REMOTE);
     return HAL_FDCAN_Start(&can_handle) == HAL_OK;
+}
+
+bool CanDriver::enable_interrupts() {
+    driver_locks.rx_fifo0 = Semaphore::New(3, 0);
+    driver_locks.rx_fifo1 = Semaphore::New(3, 0);
+    driver_locks.tx_lock  = Mutex::New();
+    if (!driver_locks.rx_fifo0.isInitialized() || !driver_locks.rx_fifo1.isInitialized()) {
+        return false;
+    }
+
+    uint32_t interrupts = 0;
+    interrupts |= FDCAN_IT_RX_FIFO0_MESSAGE_LOST;
+    interrupts |= FDCAN_IT_RX_FIFO1_MESSAGE_LOST;
+    interrupts |= FDCAN_IT_RX_FIFO0_NEW_MESSAGE;
+    interrupts |= FDCAN_IT_RX_FIFO1_NEW_MESSAGE;
+    auto status = HAL_FDCAN_ActivateNotification(&can_handle, interrupts, 0);
+    return status == HAL_OK;
 }
 
 bool CanDriver::push_filter(CanMessageFilter &filter) {
@@ -312,5 +354,44 @@ uint32_t CanDriver::get_data_length_code_from_byte_length(uint32_t byte_length) 
 
 CanDriver::CanDriver()
     : can_handle(hfdcan1),
+    driver_locks(can_driver_locks),
     operating_mode(OperatingMode::InternalLoopback),
     num_filters(0) {}
+
+
+void FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+#ifdef DEBUG
+#if DEBUG > 0
+    if (!can_driver_locks.rx_fifo1.isInitialized()) {
+        Error_Handler();
+    }
+#endif
+#endif
+    if (CHECK_MASK(RxFifo1ITs, FDCAN_IT_RX_FIFO1_MESSAGE_LOST)) {
+        Error_Handler();
+    }
+    if (CHECK_MASK(RxFifo1ITs, FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
+        if(!can_driver_locks.rx_fifo1.release()) {
+            Error_Handler();
+        }
+    }
+}
+
+void FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
+#ifdef DEBUG
+#if DEBUG > 0
+    if (!can_driver_locks.rx_fifo0.isInitialized()) {
+        Error_Handler();
+    }
+#endif
+#endif
+
+    if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_MESSAGE_LOST)) {
+        Error_Handler();
+    }
+    if (CHECK_MASK(RxFifo0ITs, FDCAN_IT_RX_FIFO0_NEW_MESSAGE)) {
+        if (!can_driver_locks.rx_fifo0.release()) {
+            Error_Handler();
+        }
+    }
+}
